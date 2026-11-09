@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Starship V Petty Cash</title>
+<style>
+  :root{--navy:#0d2137;--navy2:#12314f;--gold:#f5b301;--red:#d64545;--green:#2e9e62;--ink:#14232f;--mut:#5c6b78;--line:#dde4ea;--bg:#f4f6f8}
+  *{box-sizing:border-box} body{margin:0;font-family:-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:30}
+  header h1{font-size:19px;margin:0 0 2px} header .sub{font-size:12px;color:#b9cbdd}
+  .tiles{display:flex;gap:10px;margin-top:12px}
+  .tile{flex:1;background:var(--navy2);border-radius:12px;padding:10px 12px;color:#fff}
+  .tile .n{font-size:21px;font-weight:800;line-height:1.1} .tile .l{font-size:11px;color:#b9cbdd;text-transform:uppercase;letter-spacing:.04em}
+  nav.tabs{display:flex;gap:8px;padding:10px 16px 0}
+  nav.tabs button{flex:1;padding:10px;border-radius:10px 10px 0 0;border:1px solid var(--line);border-bottom:0;background:#e8edf1;font-weight:700;font-size:15px;cursor:pointer}
+  nav.tabs button.on{background:#fff;color:var(--navy)}
+  main{padding:0 16px 90px}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:0 0 12px 12px;padding:12px}
+  .card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .card .top{display:flex;align-items:baseline;gap:8px}
+  .card .amt{font-weight:800;font-size:16px;margin-left:auto;white-space:nowrap}
+  .amt.expense{color:#a12b2b} .amt.addition{color:#1d6b41}
+  .card .desc{font-weight:700;font-size:15px}
+  .card .meta{font-size:12px;color:var(--mut);margin-top:2px}
+  .card .receipt{font-size:12px;margin-top:6px}
+  .card .receipt a{color:var(--navy);font-weight:700}
+  .row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .chip{font-size:11px;font-weight:800;letter-spacing:.03em;padding:4px 8px;border-radius:999px;text-transform:uppercase}
+  .chip.expense{background:#fde3e3;color:#a12b2b}.chip.addition{background:#dcf2e5;color:#1d6b41}
+  .chip.Balanced{background:#dcf2e5;color:#1d6b41}.chip.Over{background:#fff1bf;color:#7a5b00}.chip.Short{background:#fde3e3;color:#a12b2b}
+  .editbtn{border:0;background:none;color:var(--mut);font-size:12px;cursor:pointer;text-decoration:underline;padding:0}
+  .btn{display:inline-block;border:0;border-radius:8px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer;background:var(--navy);color:#fff}
+  .btn.alt{background:#e8edf1;color:var(--ink)} .btn.warn{background:var(--red);color:#fff} .btn.gold{background:var(--gold);color:var(--ink)} .btn.green{background:var(--green);color:#fff}
+  .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .empty{color:var(--mut);padding:16px 4px}
+  .note-box{background:#fff8e1;border:1px solid #f7c948;border-radius:8px;padding:8px 10px;font-size:13px;margin:10px 0;font-style:italic}
+  .totals{font-size:14px;line-height:1.7}
+  .datebar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:10px}
+  .datebar label{font-size:12px;color:var(--mut);display:block}
+  .datebar input{padding:9px;border:1px solid var(--line);border-radius:8px;font-size:15px}
+  dialog{border:1px solid var(--line);border-radius:12px;width:min(94vw,430px);padding:16px}
+  dialog label{display:block;font-size:12px;color:var(--mut);margin-top:8px}
+  dialog input,dialog select,dialog textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:15px}
+  .audit-result{font-size:15px;font-weight:700;margin-top:10px}
+  .logout{float:right;color:#b9cbdd;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <a class="logout" href="/logout">Sign out</a> <a class="logout" href="/" style="margin-right:12px">All programs</a>
+  <h1 id="fundName">Starship V Petty Cash</h1>
+  <div class="sub">Log cash in and out. Audits compare counted cash to the book balance and never change the balance.</div>
+  <div class="tiles">
+    <div class="tile"><div class="n" id="tileBalance">$0.00</div><div class="l">Current balance</div></div>
+    <div class="tile"><div class="n" id="tileAdded">$0.00</div><div class="l">Total added</div></div>
+    <div class="tile"><div class="n" id="tileSpent">$0.00</div><div class="l">Total spent</div></div>
+  </div>
+</header>
+<nav class="tabs">
+  <button id="tabEntries" class="on" type="button">Entries</button>
+  <button id="tabStatement" type="button">Statement</button>
+</nav>
+<main>
+  <section id="viewEntries" class="panel">
+    <div class="btnrow">
+      <button class="btn warn" id="addExpenseBtn" type="button">Add expense</button>
+      <button class="btn green" id="addCashBtn" type="button">Add cash</button>
+      <button class="btn gold" id="auditBtn" type="button">Count cash · Audit</button>
+    </div>
+    <div id="cards"></div>
+    <h3 style="color:#0d2137;margin:18px 0 8px">Cash audits</h3>
+    <div id="audits"></div>
+  </section>
+  <section id="viewStatement" class="panel" style="display:none">
+    <div class="datebar">
+      <div><label>From</label><input type="date" id="stFrom"></div>
+      <div><label>To</label><input type="date" id="stTo"></div>
+      <button class="btn" id="stLoadBtn" type="button">Load statement</button>
+    </div>
+    <div id="statementBody"></div>
+    <div class="btnrow">
+      <button class="btn gold" id="pdfBtn" type="button">Save PDF</button>
+      <button class="btn gold" id="xlsxBtn" type="button">Save Excel</button>
+      <button class="btn alt" id="csvBtn" type="button">Save CSV</button>
+    </div>
+  </section>
+</main>
+<dialog id="txnDlg">
+  <form method="dialog" id="txnForm">
+    <h3 id="dlgTitle" style="margin:0">Add expense</h3>
+    <input type="hidden" id="f_id">
+    <input type="hidden" id="f_kind">
+    <label>Date<input id="f_date" type="date" required></label>
+    <label>Amount<input id="f_amount" type="number" step="0.01" min="0" inputmode="decimal" required></label>
+    <label>Description<input id="f_desc"></label>
+    <label>Category<input id="f_category" value="General"></label>
+    <label>Spent by (expenses)<input id="f_spentby"></label>
+    <div class="btnrow">
+      <button class="btn" id="saveTxnBtn" type="submit">Save</button>
+      <button class="btn alt" type="button" id="cancelTxnBtn">Cancel</button>
+      <button class="btn warn" type="button" id="deleteTxnBtn">Delete entry</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="auditDlg">
+  <form method="dialog" id="auditForm">
+    <h3 style="margin:0">Count cash · Audit</h3>
+    <p class="meta" style="font-size:13px;color:#5c6b78">Book balance: <strong id="auditExpected"></strong>. Enter the cash you actually counted. The audit is saved permanently and does not change the balance.</p>
+    <label>Counted amount<input id="a_counted" type="number" step="0.01" min="0" inputmode="decimal" required></label>
+    <label>Counted by<input id="a_by"></label>
+    <label>Note<input id="a_note"></label>
+    <div class="audit-result" id="auditResult"></div>
+    <div class="btnrow">
+      <button class="btn" type="submit">Save audit</button>
+      <button class="btn alt" type="button" id="cancelAuditBtn">Close</button>
+    </div>
+  </form>
+</dialog>
+<input type="file" id="receiptFile" accept="image/*" style="display:none">
+<script src="/cash/app.js"></script>
+</body>
+</html>

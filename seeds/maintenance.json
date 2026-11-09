@@ -1,0 +1,616 @@
+{
+ "items": [
+  {
+   "id": 1,
+   "name": "AC Fwd Cabin",
+   "category": "Air Conditioning",
+   "intervalDays": 90,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Ran Barnacle Buster for one hour still getting HPF error",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 2,
+   "name": "AC Stbd Cabin",
+   "category": "Air Conditioning",
+   "intervalDays": 90,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 3,
+   "name": "AC Master",
+   "category": "Air Conditioning",
+   "intervalDays": 90,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 4,
+   "name": "AC Fwd Salon",
+   "category": "Air Conditioning",
+   "intervalDays": 90,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Ran Barnacle Buster for one hour",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 5,
+   "name": "AC Aft Salon",
+   "category": "Air Conditioning",
+   "intervalDays": 90,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Ran barnacle buster for one hour",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 6,
+   "name": "AC Crew",
+   "category": "Air Conditioning",
+   "intervalDays": 90,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 8,
+   "name": "HVAC Coil Cleaning",
+   "category": "Air Conditioning",
+   "intervalDays": 365,
+   "note": "Annual coil cleaning.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 9,
+   "name": "Sea Strainer — A/C",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Cleaned today and removed seaweed and sevices canister",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 10,
+   "name": "Generator Strainer",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [
+    "generator"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 11,
+   "name": "Engine Strainers",
+   "category": "Service",
+   "intervalDays": 30,
+   "note": "",
+   "meters": [
+    "port_engine",
+    "starboard_engine"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 12,
+   "name": "Teak Deck",
+   "category": "Service",
+   "intervalDays": 90,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-07",
+   "lastNote": "Cleaner and brightener applied. No oil. Need second cleaner performed",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 13,
+   "name": "Garmin Updates",
+   "category": "Service",
+   "intervalDays": 180,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 14,
+   "name": "Engine Oil",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [
+    "port_engine",
+    "starboard_engine"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 15,
+   "name": "Seakeeper",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [
+    "seakeeper_run",
+    "seakeeper_sea"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 16,
+   "name": "Generator Oil",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [
+    "generator"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 17,
+   "name": "Water Filter",
+   "category": "Service",
+   "intervalDays": 365,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 18,
+   "name": "Sea Water Pump Strainer",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 19,
+   "name": "Engine Raw Water Impellers",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "Both engines and generator.",
+   "meters": [
+    "port_engine",
+    "starboard_engine",
+    "generator"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 20,
+   "name": "Zincs",
+   "category": "Service",
+   "intervalDays": 30,
+   "note": "Engine and generator heat exchanger zincs, hull zincs, shaft zincs, thruster zincs.",
+   "meters": [
+    "port_engine",
+    "starboard_engine",
+    "generator"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 21,
+   "name": "Fuel Filters",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "Primary and secondary, for engines and generator.",
+   "meters": [
+    "port_engine",
+    "starboard_engine",
+    "generator"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 22,
+   "name": "Generator Impeller & Coolant",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [
+    "generator"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 23,
+   "name": "Transmission Oil",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [
+    "port_engine",
+    "starboard_engine"
+   ],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 24,
+   "name": "Bottom Cleaning & Propspeed Condition",
+   "category": "Service",
+   "intervalDays": 30,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 25,
+   "name": "Batteries",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "Engine, house, and generator batteries. Record install dates in the service note when a battery is replaced.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 26,
+   "name": "Thruster Service",
+   "category": "Service",
+   "intervalDays": 30,
+   "note": "Check for impeller damage and any debris",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Dove and cleared obstruction in bow thruster. Looked and inspected stern no damage",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 27,
+   "name": "Fire Extinguishers",
+   "category": "Service",
+   "intervalDays": 365,
+   "note": "Annual inspection.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Current and in place",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 28,
+   "name": "Holding Tank Vent Filter",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 29,
+   "name": "Holding Tank Annual Service",
+   "category": "Service",
+   "intervalDays": 365,
+   "note": "Annual service and inspection covering the tank, hoses, vent filter, macerator/discharge pump, and level sensors.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 30,
+   "name": "Windlass Service",
+   "category": "Service",
+   "intervalDays": null,
+   "note": "Oil and service.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 31,
+   "name": "Exhaust Brackets & Leaks",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "No leaks and clamps in place",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 32,
+   "name": "Bilge Pumps",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "Archived parent item: the five pumps below replaced it.",
+   "meters": [],
+   "archived": true,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 33,
+   "name": "Bilge Pump Float Switches & High Water Alarm",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Test crew float switch. Functional",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 34,
+   "name": "Seawater A/C Manifold & Hoses Drip Check",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-07",
+   "lastNote": "Sealed the manifold drip with self-fusing silicone tape, leak stopped. Tape is a stopgap, monitor on the monthly check.",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 35,
+   "name": "Engine Room Blowers & Intake Louvers",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Operational",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 36,
+   "name": "Shore Power Cords & Inlets",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "Check for heat discoloration.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-10-31",
+   "lastNote": "Replace the plug on port side and examined starboard cord all working",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 37,
+   "name": "CO & Smoke Detectors",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-08",
+   "lastNote": "Replaced all batteries and completed the detector test.",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 38,
+   "name": "Fwd bilge",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "Pump 1 of 5 in the monthly pump rollup.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Functional",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 39,
+   "name": "Crew cabin bilge",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "Pump 2 of 5 in the monthly pump rollup.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Functional",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 40,
+   "name": "E/R bilge",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "Pump 3 of 5 in the monthly pump rollup.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-06",
+   "lastNote": "Removed debris and tested functional",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 41,
+   "name": "Fwd sump",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "Pump 4 of 5 in the monthly pump rollup.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-07",
+   "lastNote": "Powers on",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 42,
+   "name": "Aft sump",
+   "category": "Monthly Checks",
+   "intervalDays": 30,
+   "note": "Pump 5 of 5 in the monthly pump rollup.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-07",
+   "lastNote": "Powers on",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 43,
+   "name": "Galley Faucet",
+   "category": "Repairs",
+   "intervalDays": null,
+   "note": "Galley (kitchen) sink faucet. Mounting nut threads stripped Nov 2026, faucet loose.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-08",
+   "lastNote": "Faucet repaired, mounting secure, no longer loose.",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 44,
+   "name": "Bathroom Faucet",
+   "category": "Repairs",
+   "intervalDays": null,
+   "note": "Head sink faucet, single-hole mount clamped from below by a stud, horseshoe bracket and nut.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-08",
+   "lastNote": "Faucet tightened, mounting secure, no longer loose.",
+   "lastPerformedBy": "MS"
+  },
+  {
+   "id": 45,
+   "name": "Crew Entry Door",
+   "category": "Repairs",
+   "intervalDays": null,
+   "note": "Crew entry door hinge. Photos of the hinge bolt and the broken spacer pieces are in the chat record for 2026-11-08.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": "2026-11-08",
+   "lastNote": "Bolt came out and broke spacer. Reinstalled. Working now.",
+   "lastPerformedBy": "MS"
+  }
+ ],
+ "hours": [
+  {
+   "label": "Port Engine",
+   "lastLoggedAt": "2026-11-06",
+   "lastPerformedBy": "MS",
+   "meter": "port_engine",
+   "value": 857.4
+  },
+  {
+   "label": "Starboard Engine",
+   "lastLoggedAt": "2026-11-06",
+   "lastPerformedBy": "MS",
+   "meter": "starboard_engine",
+   "value": 829.9
+  },
+  {
+   "label": "Generator",
+   "lastLoggedAt": "2026-11-06",
+   "lastPerformedBy": "MS",
+   "meter": "generator",
+   "value": 1633.2
+  },
+  {
+   "label": "Seakeeper Run",
+   "lastLoggedAt": "2026-11-06",
+   "lastPerformedBy": "MS",
+   "meter": "seakeeper_run",
+   "value": 969
+  },
+  {
+   "label": "Seakeeper Sea",
+   "lastLoggedAt": "2026-11-06",
+   "lastPerformedBy": "MS",
+   "meter": "seakeeper_sea",
+   "value": 772
+  }
+ ],
+ "pumpNames": [
+  "Fwd bilge",
+  "Crew cabin bilge",
+  "E/R bilge",
+  "Fwd sump",
+  "Aft sump"
+ ],
+ "recipients": [
+  {
+   "email": "shahzain@gmail.com",
+   "name": "Shahzain Malik"
+  },
+  {
+   "email": "shahzain@gmail.com",
+   "name": "Zohaib"
+  }
+ ]
+}

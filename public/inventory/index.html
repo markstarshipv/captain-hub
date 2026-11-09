@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Starship V Par Inventory</title>
+<style>
+  :root{--navy:#0d2137;--navy2:#12314f;--gold:#f5b301;--red:#d64545;--yellow:#f7c948;--green:#2e9e62;--ink:#14232f;--mut:#5c6b78;--line:#dde4ea;--bg:#f4f6f8}
+  *{box-sizing:border-box} body{margin:0;font-family:-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:30}
+  header h1{font-size:19px;margin:0 0 2px} header .sub{font-size:12px;color:#b9cbdd}
+  .tiles{display:flex;gap:10px;margin-top:12px}
+  .tile{flex:1;background:var(--navy2);border-radius:12px;padding:10px 12px;color:#fff}
+  .tile .n{font-size:22px;font-weight:800;line-height:1.1} .tile .l{font-size:11px;color:#b9cbdd;text-transform:uppercase;letter-spacing:.04em}
+  button.tile{border:0;text-align:left;cursor:pointer;background:var(--yellow);color:var(--ink)}
+  button.tile .l{color:#5a4a08} button.tile .hint{font-size:11px;color:#5a4a08;margin-top:2px}
+  nav.tabs{display:flex;gap:8px;padding:10px 16px 0}
+  nav.tabs button{flex:1;padding:10px;border-radius:10px 10px 0 0;border:1px solid var(--line);border-bottom:0;background:#e8edf1;font-weight:700;font-size:15px;cursor:pointer}
+  nav.tabs button.on{background:#fff;color:var(--navy)}
+  main{padding:0 16px 90px}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:0 0 12px 12px;padding:12px}
+  .pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-size:13px;cursor:pointer}
+  .pill.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .pill .c{opacity:.65;font-size:11px;margin-left:4px}
+  .banner{display:none;background:#fff4cc;border:1px solid var(--yellow);border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:10px}
+  .banner.show{display:flex;justify-content:space-between;align-items:center}
+  .banner button{border:0;background:none;color:#8a6d00;font-weight:700;cursor:pointer}
+  .search{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px;margin-bottom:10px}
+  .card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .card .nm{font-weight:700;font-size:15px}
+  .card .meta{font-size:12px;color:var(--mut);margin-top:2px}
+  .card .note{font-size:12px;color:#7a5b00;background:#fff8e1;border-radius:6px;padding:4px 6px;margin-top:6px}
+  .row{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .chip{font-size:11px;font-weight:800;letter-spacing:.03em;padding:4px 8px;border-radius:999px;text-transform:uppercase}
+  .chip.reorder{background:#fde3e3;color:#a12b2b}.chip.top_up{background:#fff1bf;color:#7a5b00}.chip.stocked{background:#dcf2e5;color:#1d6b41}.chip.not_counted{background:#e8edf1;color:#5c6b78}
+  .stepper{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .stepper button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:20px;cursor:pointer}
+  .stepper input{width:64px;text-align:center;font-size:16px;padding:8px 4px;border:1px solid var(--line);border-radius:8px}
+  .editbtn{border:0;background:none;color:var(--mut);font-size:12px;cursor:pointer;text-decoration:underline}
+  .vendor{margin-bottom:18px} .vendor h3{margin:14px 0 6px;font-size:16px;color:var(--navy)}
+  .oline{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:14px}
+  .oline .flag{font-weight:800;font-size:11px} .flag.REORDER{color:#a12b2b}.flag.Belowpar{color:#7a5b00}
+  .btn{display:inline-block;border:0;border-radius:8px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer;background:var(--navy);color:#fff}
+  .btn.alt{background:#e8edf1;color:var(--ink)} .btn.warn{background:var(--red);color:#fff} .btn.gold{background:var(--gold);color:var(--ink)}
+  .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .empty{color:var(--mut);padding:16px 4px}
+  dialog{border:1px solid var(--line);border-radius:12px;width:min(94vw,430px);padding:16px}
+  dialog label{display:block;font-size:12px;color:var(--mut);margin-top:8px}
+  dialog input,dialog select,dialog textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:15px}
+  .logout{float:right;color:#b9cbdd;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <a class="logout" href="/logout">Sign out</a> <a class="logout" href="/" style="margin-right:12px">All programs</a>
+  <h1>Starship V Par Inventory</h1>
+  <div class="sub">Weekly count. REORDER means at or below the reorder point. TOP UP means below par, not urgent.</div>
+  <div class="tiles">
+    <div class="tile"><div class="n" id="tileCounted">0 of 0</div><div class="l">Counted</div></div>
+    <button class="tile" id="tileOrder" type="button"><div class="n" id="tileToOrder">0</div><div class="l">Items to order</div><div class="hint">View order report</div></button>
+    <div class="tile"><div class="n" id="tileReorder">0</div><div class="l">At reorder point</div></div>
+  </div>
+</header>
+<nav class="tabs">
+  <button id="tabCount" class="on" type="button">Count</button>
+  <button id="tabReport" type="button">Order Report</button>
+</nav>
+<main>
+  <section id="viewCount" class="panel">
+    <div class="pills" id="pills"></div>
+    <div class="banner" id="catBanner"><span id="catBannerText"></span><button id="showAll" type="button">Show all</button></div>
+    <input class="search" id="search" type="search" placeholder="Search items">
+    <div class="btnrow">
+      <button class="btn alt" id="addItemBtn" type="button">Add item</button>
+      <button class="btn warn" id="newCountBtn" type="button">Start new count</button>
+    </div>
+    <div id="cards"></div>
+  </section>
+  <section id="viewReport" class="panel" style="display:none">
+    <div id="reportSummary"></div>
+    <div class="btnrow">
+      <button class="btn gold" id="pdfBtn" type="button">Save PDF</button>
+      <button class="btn gold" id="xlsxBtn" type="button">Save Excel</button>
+      <button class="btn alt" id="copyAllBtn" type="button">Copy full list</button>
+    </div>
+    <div id="reportBody"></div>
+  </section>
+</main>
+<dialog id="itemDlg">
+  <form method="dialog" id="itemForm">
+    <h3 id="dlgTitle" style="margin:0">Edit item</h3>
+    <input type="hidden" id="f_id">
+    <label>Name<input id="f_name" required></label>
+    <label>Category<input id="f_category" required></label>
+    <label>Par quantity<input id="f_par" type="number" step="0.25" min="0" required></label>
+    <label>Reorder point (blank if none)<input id="f_reorder" type="number" step="0.25" min="0"></label>
+    <label>Unit<input id="f_unit" required></label>
+    <label>Vendor<input id="f_vendor" required></label>
+    <label>Reorder note<input id="f_reorderText"></label>
+    <label>Notes<textarea id="f_notes" rows="2"></textarea></label>
+    <div class="btnrow">
+      <button class="btn" id="saveItemBtn" type="submit">Save</button>
+      <button class="btn alt" type="button" id="cancelItemBtn">Cancel</button>
+      <button class="btn warn" type="button" id="deleteItemBtn">Delete item</button>
+    </div>
+  </form>
+</dialog>
+<script src="/inventory/app.js"></script>
+</body>
+</html>

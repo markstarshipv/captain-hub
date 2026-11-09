@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Starship V Maintenance Tracker</title>
+<style>
+  :root{--navy:#0d2137;--navy2:#12314f;--gold:#f5b301;--red:#d64545;--yellow:#f7c948;--green:#2e9e62;--ink:#14232f;--mut:#5c6b78;--line:#dde4ea;--bg:#f4f6f8}
+  *{box-sizing:border-box} body{margin:0;font-family:-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:30}
+  header h1{font-size:19px;margin:0 0 2px} header .sub{font-size:12px;color:#b9cbdd}
+  .tiles{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .tile{flex:1;min-width:90px;background:var(--navy2);border-radius:12px;padding:10px 12px;color:#fff}
+  .tile .n{font-size:22px;font-weight:800;line-height:1.1} .tile .l{font-size:11px;color:#b9cbdd;text-transform:uppercase;letter-spacing:.04em}
+  .tile.bad{background:#7a2121} .tile.warn{background:#6b5410}
+  nav.tabs{display:flex;gap:8px;padding:10px 16px 0}
+  nav.tabs button{flex:1;padding:10px;border-radius:10px 10px 0 0;border:1px solid var(--line);border-bottom:0;background:#e8edf1;font-weight:700;font-size:15px;cursor:pointer}
+  nav.tabs button.on{background:#fff;color:var(--navy)}
+  main{padding:0 16px 90px}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:0 0 12px 12px;padding:12px}
+  .pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-size:13px;cursor:pointer}
+  .pill.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .pill .c{opacity:.65;font-size:11px;margin-left:4px}
+  .banner{display:none;background:#fff4cc;border:1px solid var(--yellow);border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:10px}
+  .banner.show{display:flex;justify-content:space-between;align-items:center}
+  .banner button{border:0;background:none;color:#8a6d00;font-weight:700;cursor:pointer}
+  .search{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px;margin-bottom:10px}
+  .card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .card .nm{font-weight:700;font-size:15px}
+  .card .meta{font-size:12px;color:var(--mut);margin-top:2px}
+  .card .note{font-size:12px;color:#7a5b00;background:#fff8e1;border-radius:6px;padding:4px 6px;margin-top:6px}
+  .card .lastnote{font-size:12px;color:var(--ink);margin-top:6px}
+  .row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .chip{font-size:11px;font-weight:800;letter-spacing:.03em;padding:4px 8px;border-radius:999px;text-transform:uppercase}
+  .chip.overdue{background:#fde3e3;color:#a12b2b}.chip.due_soon{background:#fff1bf;color:#7a5b00}.chip.on_schedule{background:#dcf2e5;color:#1d6b41}.chip.not_logged{background:#e8edf1;color:#5c6b78}.chip.no_interval{background:#e6e0f2;color:#4a3a75}
+  .cardbtns{margin-left:auto;display:flex;gap:6px}
+  .editbtn{border:0;background:none;color:var(--mut);font-size:12px;cursor:pointer;text-decoration:underline}
+  .logbtn{border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;cursor:pointer}
+  .btn{display:inline-block;border:0;border-radius:8px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer;background:var(--navy);color:#fff}
+  .btn.alt{background:#e8edf1;color:var(--ink)} .btn.warn{background:var(--red);color:#fff} .btn.gold{background:var(--gold);color:var(--ink)}
+  .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .empty{color:var(--mut);padding:16px 4px}
+  .pumpline{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#f8fafc}
+  .pumpline .hd{font-weight:800;font-size:15px}
+  .pumpline .pump{font-size:13px;margin-top:4px}
+  .meter{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .meter .mv{font-size:22px;font-weight:800}
+  dialog{border:1px solid var(--line);border-radius:12px;width:min(94vw,430px);padding:16px}
+  dialog label{display:block;font-size:12px;color:var(--mut);margin-top:8px}
+  dialog input,dialog select,dialog textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:15px}
+  dialog .checks label{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink)}
+  dialog .checks input{width:auto}
+  .histline{border-bottom:1px solid var(--line);padding:8px 0;font-size:14px}
+  .histline .meta{font-size:12px;color:var(--mut)}
+  .logout{float:right;color:#b9cbdd;font-size:12px}
+  .checkrow{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut);margin:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <a class="logout" href="/logout">Sign out</a> <a class="logout" href="/" style="margin-right:12px">All programs</a>
+  <h1>Starship V Maintenance Tracker</h1>
+  <div class="sub">Due board, service log, and engine hours. Every entry needs a Performed By and is stamped automatically.</div>
+  <div class="tiles">
+    <div class="tile bad"><div class="n" id="tileOverdue">0</div><div class="l">Overdue</div></div>
+    <div class="tile warn"><div class="n" id="tileDueSoon">0</div><div class="l">Due soon</div></div>
+    <div class="tile"><div class="n" id="tilePumps">0 of 5</div><div class="l">Pump check</div></div>
+    <div class="tile"><div class="n" id="tileTotal">0</div><div class="l">Items tracked</div></div>
+  </div>
+</header>
+<nav class="tabs">
+  <button id="tabBoard" class="on" type="button">Due Board</button>
+  <button id="tabHours" type="button">Engine Hours</button>
+  <button id="tabReport" type="button">Report</button>
+</nav>
+<main>
+  <section id="viewBoard" class="panel">
+    <div id="pumpLine"></div>
+    <div class="pills" id="pills"></div>
+    <div class="banner" id="catBanner"><span id="catBannerText"></span><button id="showAll" type="button">Show all</button></div>
+    <input class="search" id="search" type="search" placeholder="Search items">
+    <div class="btnrow">
+      <button class="btn alt" id="addItemBtn" type="button">Add item</button>
+    </div>
+    <label class="checkrow"><input type="checkbox" id="showArchived"> Show archived items</label>
+    <div id="cards"></div>
+  </section>
+  <section id="viewHours" class="panel" style="display:none">
+    <div id="meterCards"></div>
+    <h3 style="margin:16px 0 6px;color:#0d2137">Log hours</h3>
+    <div id="hourForm"></div>
+    <h3 style="margin:16px 0 6px;color:#0d2137">History</h3>
+    <div id="hourHistory"></div>
+  </section>
+  <section id="viewReport" class="panel" style="display:none">
+    <div id="reportSummary"></div>
+    <div class="btnrow">
+      <button class="btn gold" id="pdfBtn" type="button">Save PDF</button>
+      <button class="btn gold" id="xlsxBtn" type="button">Save Excel</button>
+    </div>
+    <div id="reportBody"></div>
+  </section>
+</main>
+<dialog id="logDlg">
+  <form method="dialog" id="logForm">
+    <h3 id="logDlgTitle" style="margin:0">Log service</h3>
+    <input type="hidden" id="l_itemId">
+    <label>Date serviced<input id="l_date" type="date" required></label>
+    <label>Performed by<input id="l_by" required></label>
+    <label>Note<textarea id="l_note" rows="3"></textarea></label>
+    <div id="l_hoursWrap"></div>
+    <div class="btnrow">
+      <button class="btn" id="saveLogBtn" type="submit">Save entry</button>
+      <button class="btn alt" type="button" id="cancelLogBtn">Cancel</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="itemDlg">
+  <form method="dialog" id="itemForm">
+    <h3 id="dlgTitle" style="margin:0">Edit item</h3>
+    <input type="hidden" id="f_id">
+    <label>Name<input id="f_name" required></label>
+    <label>Category<input id="f_category" required></label>
+    <label>Interval in days (blank for no interval)<input id="f_interval" type="number" min="1" step="1"></label>
+    <label>Standing note<textarea id="f_note" rows="2"></textarea></label>
+    <div class="checks" id="f_meters"></div>
+    <div class="btnrow">
+      <button class="btn" id="saveItemBtn" type="submit">Save</button>
+      <button class="btn alt" type="button" id="cancelItemBtn">Cancel</button>
+      <button class="btn warn" type="button" id="archiveItemBtn">Archive item</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="histDlg">
+  <h3 id="histTitle" style="margin:0 0 8px">History</h3>
+  <div id="histBody"></div>
+  <div class="btnrow"><button class="btn alt" type="button" id="closeHistBtn">Close</button></div>
+</dialog>
+<script src="/maintenance/app.js"></script>
+</body>
+</html>
