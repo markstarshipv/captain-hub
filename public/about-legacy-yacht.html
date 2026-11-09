@@ -163,9 +163,8 @@
     </section>
     <section>
       <div class="contact-card">
-        <div class="big">Plan an outing</div>
-        <p style="margin-bottom:10px">Based in Miami, Florida. Call, follow along, or send the form and it reaches both of us.</p>
-        <a href="tel:+18432500865">(843) 250-0865</a><br>
+        <div class="big">More about Legacy Yacht</div>
+        <p style="margin-bottom:10px">Legacy Yacht appears on this site because she is part of the story behind these programs. For more information on Legacy Yacht, follow along on Instagram or send a short note below.</p>
         <a href="https://www.instagram.com/legacy_yacht" target="_blank" rel="noopener">Instagram: @legacy_yacht</a>
         <form id="inquiryForm" style="margin-top:18px;text-align:left">
           <label style="display:block;font-size:13px;font-weight:600;color:#5b7183;margin-bottom:10px">Your name
@@ -177,10 +176,10 @@
           <label style="display:block;font-size:13px;font-weight:600;color:#5b7183;margin-bottom:10px">Phone (optional)
             <input name="phone" type="tel" autocomplete="tel" style="display:block;width:100%;margin-top:4px;padding:11px;border:1px solid #cfd9e2;border-radius:9px;font-size:16px;box-sizing:border-box">
           </label>
-          <label style="display:block;font-size:13px;font-weight:600;color:#5b7183;margin-bottom:12px">What are you planning?
+          <label style="display:block;font-size:13px;font-weight:600;color:#5b7183;margin-bottom:12px">Your message
             <textarea name="message" rows="4" required style="display:block;width:100%;margin-top:4px;padding:11px;border:1px solid #cfd9e2;border-radius:9px;font-size:16px;box-sizing:border-box"></textarea>
           </label>
-          <button type="submit" style="width:100%;padding:13px;border:0;border-radius:9px;background:#0b2239;color:#fff;font-weight:700;font-size:16px;letter-spacing:.4px">Send inquiry</button>
+          <button type="submit" style="width:100%;padding:13px;border:0;border-radius:9px;background:#0b2239;color:#fff;font-weight:700;font-size:16px;letter-spacing:.4px">Send</button>
           <div id="inquiryMsg" style="margin-top:10px;font-size:14px;text-align:center"></div>
         </form>
         <p style="margin-top:14px;font-size:13.5px;color:#5b7183">Prefer email? <a href="mailto:mark@spurling.net,shahzain@gmail.com?subject=Legacy%20Yacht%20information">Information</a></p>
@@ -210,7 +209,7 @@
           });
           if (!r.ok) throw new Error('send failed');
           msg.style.color = '#1d7a3a';
-          msg.textContent = 'Thank you. Your inquiry is on its way, and we will be in touch.';
+          msg.textContent = 'Thank you. Your note is on its way.';
           f.reset();
         } catch (err) {
           msg.style.color = '#b3261e';
