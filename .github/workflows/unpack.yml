@@ -27,5 +27,5 @@ jobs:
           git config user.email "mark@spurling.net"
           git add -A
           git status --short
-          git commit -m "Initial deploy"
+          git commit -m "Responsive home page"
           git push
