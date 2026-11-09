@@ -117,7 +117,10 @@ const deps = name => ({
 const inventory = createInventory(deps('inventory'));
 const cash = createCash(deps('cash'));
 const maintenance = createMaintenance(deps('maintenance'));
-const tides = createTides({ requireAuth });
+// Tides is PUBLIC by Mark's decision (2026-11-09): it serves published NOAA
+// predictions and stores nothing, so it gets a pass-through instead of the
+// hub sign-in. Every other program stays behind the password.
+const tides = createTides({ requireAuth: (req, res, next) => next() });
 
 app.use('/inventory', inventory.router);
 app.use('/cash', cash.router);

@@ -1,6 +1,7 @@
 // Tide Chart module for the Captain Spurling hub.
 // Adapted from the standalone starship-v-tides app with no behavior changes,
-// except: auth is the hub's (the router is mounted behind the hub sign-in).
+// except: auth comes from the hub, and the hub mounts this program PUBLICLY
+// (no sign-in) by Mark's decision, since it only republishes NOAA data.
 // No database, nothing is saved. The server fetches NOAA high/low tide
 // predictions and caches them in memory for about 6 hours, because browsers
 // were blocked from calling NOAA directly in the previous public version.
