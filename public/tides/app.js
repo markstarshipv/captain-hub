@@ -118,10 +118,10 @@ function renderStation(st, nowMs) {
   html += '</div>';
   html += curveSVG(preds, nowMs);
 
-  // Today and tomorrow tables.
+  // Today's table only (Mark's call, 2026-11-09: today only, no day-ahead table).
   const d = new Date(nowMs);
   const todayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0);
-  for (const [label, dayStart] of [['Today', todayStart], ['Tomorrow', todayStart + 24 * 3600 * 1000]]) {
+  for (const [label, dayStart] of [['Today', todayStart]]) {
     const rows = preds.filter(p => p.ms >= dayStart && p.ms < dayStart + 24 * 3600 * 1000);
     if (!rows.length) continue;
     html += `<div class="daylabel">${label}, ${fmtDay(dayStart)}</div><table class="tides">`;
