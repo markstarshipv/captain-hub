@@ -27,5 +27,5 @@ jobs:
           git config user.email "mark@spurling.net"
           git add -A
           git status --short
-          git commit -m "Nautical Home button"
+          git commit -m "Legacy Yacht Instagram and inquiry form"
           git push
