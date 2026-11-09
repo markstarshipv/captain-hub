@@ -46,21 +46,32 @@ function authed(req) {
 }
 // Used by the program routers: inside a mounted router req.path is relative
 // to the mount point, so /api/, /export/ and /receipt/ checks work exactly
-// as they did in the standalone apps.
+// as they did in the standalone apps. Page requests bounce to the sign-in
+// page with a next parameter so the user lands in the program they clicked.
+function safeNext(v) {
+  if (typeof v !== 'string' || v.length > 200) return '';
+  if (!v.startsWith('/') || v.startsWith('//')) return '';
+  return v;
+}
 function requireAuth(req, res, next) {
   if (authed(req)) return next();
   if (req.path.startsWith('/api/') || req.path.startsWith('/export/') || req.path.startsWith('/receipt/')) {
     return res.status(401).json({ error: 'Not signed in' });
   }
-  return res.redirect('/login');
+  const dest = safeNext(req.originalUrl || '') || '/';
+  return res.redirect('/login?next=' + encodeURIComponent(dest));
 }
 app.get('/login', (req, res) => {
-  if (!APP_PASSWORD || authed(req)) return res.redirect('/');
+  if (!APP_PASSWORD || authed(req)) return res.redirect(safeNext(req.query.next) || '/');
+  const nextField = safeNext(req.query.next)
+    ? `<input type="hidden" name="next" value="${safeNext(req.query.next).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}">`
+    : '';
   res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Captain Spurling, Starship V Programs</title><style>body{font-family:-apple-system,system-ui,sans-serif;background:#0d2137;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .card{background:#12314f;padding:28px;border-radius:14px;width:min(92vw,340px)}h1{font-size:19px;margin:0 0 14px}input{width:100%;padding:12px;border-radius:8px;border:1px solid #3a5a78;background:#0a1a2c;color:#fff;font-size:16px;box-sizing:border-box}
 button{width:100%;margin-top:12px;padding:12px;border:0;border-radius:8px;background:#f5b301;color:#14232f;font-weight:700;font-size:16px}</style></head>
 <body><form class="card" method="POST" action="/login"><h1>Captain Spurling, Starship V Programs</h1>
+${nextField}
 <input type="password" name="password" placeholder="Password" autocomplete="current-password" required>
 <button type="submit">Sign in</button>
 <div style="text-align:center;margin-top:16px;font-size:13.5px"><a style="color:#c8d6e2" href="/about-captain-mark">About Captain Mark</a> &nbsp;·&nbsp; <a style="color:#c8d6e2" href="/about-legacy-yacht">About Legacy Yacht</a></div></form></body></html>`);
@@ -69,7 +80,7 @@ app.post('/login', (req, res) => {
   if (req.body.password === APP_PASSWORD) {
     const exp = String(Date.now() + 30 * 24 * 3600 * 1000);
     res.setHeader('Set-Cookie', `${COOKIE}=${exp}.${sign(exp)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 3600}`);
-    return res.redirect('/');
+    return res.redirect(safeNext(req.body.next) || '/');
   }
   res.redirect('/login');
 });
@@ -113,8 +124,10 @@ app.use('/cash', cash.router);
 app.use('/maintenance', maintenance.router);
 app.use('/tides', tides.router);
 
-// ---------------- landing page (home screen, sign-in required) -------------
-app.get('/', requireAuth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+// ---------------- landing page (PUBLIC home screen) ------------------------
+// Anyone can land on captain.spurling.net and see the brands and the About
+// pages; the password is asked only when a visitor clicks into a program.
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 Promise.all([inventory.ready, cash.ready, maintenance.ready, tides.ready])
   .then(() => app.listen(PORT, () => console.log(`Captain Hub listening on ${PORT} (store: ${pool ? 'pg' : 'file'})`)))
