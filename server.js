@@ -62,7 +62,8 @@ app.get('/login', (req, res) => {
 button{width:100%;margin-top:12px;padding:12px;border:0;border-radius:8px;background:#f5b301;color:#14232f;font-weight:700;font-size:16px}</style></head>
 <body><form class="card" method="POST" action="/login"><h1>Captain Spurling, Starship V Programs</h1>
 <input type="password" name="password" placeholder="Password" autocomplete="current-password" required>
-<button type="submit">Sign in</button></form></body></html>`);
+<button type="submit">Sign in</button>
+<div style="text-align:center;margin-top:16px;font-size:13.5px"><a style="color:#c8d6e2" href="/about-captain-mark">About Captain Mark</a> &nbsp;·&nbsp; <a style="color:#c8d6e2" href="/about-legacy-yacht">About Legacy Yacht</a></div></form></body></html>`);
 });
 app.post('/login', (req, res) => {
   if (req.body.password === APP_PASSWORD) {
@@ -77,6 +78,11 @@ app.get('/logout', (req, res) => {
   res.redirect('/login');
 });
 app.get('/healthz', (req, res) => res.json({ ok: true }));
+
+// ---------------- public about pages (no sign-in required) -----------------
+app.get('/about-captain-mark', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about-captain-mark.html')));
+app.get('/about-legacy-yacht', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about-legacy-yacht.html')));
+app.use('/about', express.static(path.join(__dirname, 'public', 'about'), { maxAge: '1h' }));
 
 // ---------------- storage: one shared pool, or per-module files ------------
 let pool = null;
