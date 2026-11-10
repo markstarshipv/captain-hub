@@ -22,6 +22,7 @@ const { createInventory } = require('./modules/inventory');
 const { createCash } = require('./modules/cash');
 const { createMaintenance } = require('./modules/maintenance');
 const { createTides } = require('./modules/tides');
+const { createInquiries } = require('./modules/inquiries');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -121,17 +122,26 @@ const maintenance = createMaintenance(deps('maintenance'));
 // predictions and stores nothing, so it gets a pass-through instead of the
 // hub sign-in. Every other program stays behind the password.
 const tides = createTides({ requireAuth: (req, res, next) => next() });
+// Legacy Yacht inquiry form: PUBLIC by design (it is the public contact
+// form on /about-legacy-yacht). Stores every submission in the hub database
+// and emails it to Mark, cc Shahzain, via the hub's own Gmail login.
+const inquiries = createInquiries({
+  pool,
+  dataFile: path.join(dataDir, 'inquiries.json'),
+  reportToken: REPORT_TOKEN,
+});
 
 app.use('/inventory', inventory.router);
 app.use('/cash', cash.router);
 app.use('/maintenance', maintenance.router);
 app.use('/tides', tides.router);
+app.use('/', inquiries.router);
 
 // ---------------- landing page (PUBLIC home screen) ------------------------
 // Anyone can land on captain.spurling.net and see the brands and the About
 // pages; the password is asked only when a visitor clicks into a program.
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-Promise.all([inventory.ready, cash.ready, maintenance.ready, tides.ready])
+Promise.all([inventory.ready, cash.ready, maintenance.ready, tides.ready, inquiries.ready])
   .then(() => app.listen(PORT, () => console.log(`Captain Hub listening on ${PORT} (store: ${pool ? 'pg' : 'file'})`)))
   .catch(e => { console.error('Store init failed', e); process.exit(1); });
