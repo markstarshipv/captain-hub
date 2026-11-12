@@ -134,6 +134,7 @@ let lastReport = null;
 async function renderReport() {
   const report = await api('/inventory/api/report');
   lastReport = report;
+  renderCartStatus();
   $('reportSummary').innerHTML = `<p><strong>${report.toOrder} items to order</strong>, ${report.reorderCount} at or below the reorder point. Counted ${report.counted} of ${report.total} items.</p>`;
   const body = $('reportBody');
   body.innerHTML = '';
@@ -184,6 +185,40 @@ async function saveFile(url, filename) {
 }
 $('pdfBtn').onclick = () => saveFile('/inventory/export/order.pdf', 'Starship-V-Order-Report.pdf');
 $('xlsxBtn').onclick = () => saveFile('/inventory/export/order.xlsx', 'Starship-V-Order-Report.xlsx');
+// ---- shopping carts ----
+function cartCountsText(counts) {
+  return Object.keys(counts || {}).map(v => counts[v] + ' from ' + v).join(', ');
+}
+async function renderCartStatus() {
+  const el = $('cartStatus');
+  try {
+    const data = await api('/inventory/api/cart-request/latest');
+    const r = data.request;
+    if (!r) { el.textContent = ''; return; }
+    const when = new Date(r.updatedAt || r.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    if (r.status === 'pending') el.innerHTML = '<strong>Carts requested ' + when + '</strong> (' + escapeHtml(cartCountsText(r.counts)) + '). Marley builds them automatically and messages you the cart links. Deliveries: Friday morning, Saturday morning fallback.';
+    else if (r.status === 'claimed') el.innerHTML = '<strong>Carts are being built now</strong> (' + escapeHtml(cartCountsText(r.counts)) + ').';
+    else if (r.status === 'built') el.innerHTML = '<strong>Carts built ' + when + '.</strong>' + (r.result && r.result.summary ? ' ' + escapeHtml(r.result.summary) : '');
+    else if (r.status === 'failed') el.innerHTML = '<strong>Cart build hit a problem ' + when + '.</strong>' + (r.result && r.result.summary ? ' ' + escapeHtml(r.result.summary) : '');
+    else el.textContent = '';
+  } catch (e) { el.textContent = ''; }
+}
+$('cartBtn').onclick = async () => {
+  if (!lastReport) { await renderReport(); }
+  if (!lastReport || !lastReport.toOrder) { alert('Nothing to order yet. Enter counts first; only items below par go in the carts.'); return; }
+  const counts = {};
+  for (const v of Object.keys(lastReport.byVendor)) counts[v] = lastReport.byVendor[v].length;
+  if (!confirm('Build shopping carts from this order list?\n\n' + cartCountsText(counts) + '.\n\nMarley will build the carts at each store and message you the links. Deliveries are set for Friday morning (Saturday morning fallback). Nothing is checked out or paid.')) return;
+  $('cartBtn').disabled = true;
+  try {
+    const out = await api('/inventory/api/cart-request', {});
+    if (out.error) { alert(out.error); return; }
+    alert(out.alreadyQueued
+      ? 'Carts were already requested and are in the queue. Marley is on it.'
+      : 'Cart request sent. Marley will build the carts and message you the links.');
+    await renderCartStatus();
+  } finally { $('cartBtn').disabled = false; }
+};
 // ---- item editor ----
 function openEditor(it) {
   $('dlgTitle').textContent = it ? 'Edit item' : 'Add item';

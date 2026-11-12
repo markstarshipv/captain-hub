@@ -61,6 +61,14 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
           );
         }
       }
+      await pool.query(`CREATE TABLE IF NOT EXISTS cart_requests (
+        id SERIAL PRIMARY KEY,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        status TEXT NOT NULL DEFAULT 'pending',
+        payload JSONB NOT NULL,
+        result JSONB,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`);
       store = { mode: 'pg', pool };
     } else {
       let data;
@@ -70,6 +78,8 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
         data = { nextId: seed.length + 1, items: seed.map((s, i) => ({ id: i + 1, ...s, currentCount: null, lastCountedAt: null })) };
         fs.writeFileSync(dataFile, JSON.stringify(data, null, 1));
       }
+      if (!Array.isArray(data.cartRequests)) data.cartRequests = [];
+      if (!data.nextCartId) data.nextCartId = 1;
       store = { mode: 'file', file: dataFile, data };
     }
   }
@@ -188,11 +198,95 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
     return { generatedAt: new Date().toISOString(), total: items.length, counted, toOrder, reorderCount, byVendor };
   }
 
+  // ---------------- shopping cart requests ----------------
+  // The "Build shopping carts" button stores a request here; Marley's
+  // watcher picks it up from the token feed and builds the carts at
+  // Sam's Club, Walmart, and Amazon. Statuses: pending -> claimed -> built.
+  function vendorCounts(report) {
+    const counts = {};
+    for (const v of Object.keys(report.byVendor)) counts[v] = report.byVendor[v].length;
+    return counts;
+  }
+  function rowToCartRequest(r) {
+    return {
+      id: r.id,
+      createdAt: r.created_at !== undefined ? new Date(r.created_at).toISOString() : r.createdAt,
+      status: r.status,
+      payload: typeof r.payload === 'string' ? JSON.parse(r.payload) : r.payload,
+      result: r.result == null ? null : (typeof r.result === 'string' ? JSON.parse(r.result) : r.result),
+      updatedAt: r.updated_at !== undefined ? new Date(r.updated_at).toISOString() : r.updatedAt,
+    };
+  }
+  async function listCartRequests() {
+    if (store.mode === 'pg') {
+      const { rows } = await store.pool.query('SELECT * FROM cart_requests ORDER BY id');
+      return rows.map(rowToCartRequest);
+    }
+    return [...store.data.cartRequests].sort((a, b) => a.id - b.id);
+  }
+  async function createCartRequest() {
+    const report = await buildReport();
+    if (!report.toOrder) return { empty: true };
+    const existing = (await listCartRequests()).find(r => r.status === 'pending' || r.status === 'claimed');
+    if (existing) return { alreadyQueued: true, request: existing };
+    const now = new Date().toISOString();
+    if (store.mode === 'pg') {
+      const { rows } = await store.pool.query(
+        `INSERT INTO cart_requests (payload) VALUES ($1) RETURNING *`, [JSON.stringify(report)]);
+      return { request: rowToCartRequest(rows[0]) };
+    }
+    const req = { id: store.data.nextCartId++, createdAt: now, status: 'pending', payload: report, result: null, updatedAt: now };
+    store.data.cartRequests.push(req);
+    saveFile();
+    return { request: req };
+  }
+  async function pendingCartRequests() {
+    const staleBefore = Date.now() - 2 * 60 * 60 * 1000;
+    return (await listCartRequests()).filter(r =>
+      r.status === 'pending' || (r.status === 'claimed' && new Date(r.updatedAt).getTime() < staleBefore));
+  }
+  async function latestCartRequest() {
+    const all = await listCartRequests();
+    return all.length ? all[all.length - 1] : null;
+  }
+  async function setCartRequestStatus(id, status, result) {
+    const now = new Date().toISOString();
+    if (store.mode === 'pg') {
+      const { rows } = await store.pool.query(
+        `UPDATE cart_requests SET status=$1, result=$2, updated_at=$3 WHERE id=$4 RETURNING *`,
+        [status, result ? JSON.stringify(result) : null, now, id]);
+      return rows.length ? rowToCartRequest(rows[0]) : null;
+    }
+    const req = store.data.cartRequests.find(r => r.id === id);
+    if (!req) return null;
+    req.status = status;
+    if (result !== undefined) req.result = result;
+    req.updatedAt = now;
+    saveFile();
+    return req;
+  }
+
   // Token-protected report feed for the Monday email job. Registered before
   // the hub auth middleware: it answers to the token, not the sign-in cookie.
   router.get('/api/report.json', async (req, res) => {
     if (!reportToken || req.query.token !== reportToken) return res.status(403).json({ error: 'Forbidden' });
     res.json(await buildReport());
+  });
+
+  // Token-protected cart-request feed for the cart-builder watcher: list
+  // pending requests, and let the watcher claim / complete them.
+  router.get('/api/cart-requests.json', async (req, res) => {
+    if (!reportToken || req.query.token !== reportToken) return res.status(403).json({ error: 'Forbidden' });
+    res.json({ requests: await pendingCartRequests() });
+  });
+  router.post('/api/cart-requests/status', async (req, res) => {
+    if (!reportToken || !req.body || req.body.token !== reportToken) return res.status(403).json({ error: 'Forbidden' });
+    const id = Number(req.body.id);
+    const status = String(req.body.status || '');
+    if (!id || !['claimed', 'built', 'failed', 'pending'].includes(status)) return res.status(400).json({ error: 'Bad status update' });
+    const updated = await setCartRequestStatus(id, status, req.body.result);
+    if (!updated) return res.status(404).json({ error: 'No such request' });
+    res.json({ ok: true, request: updated });
   });
 
   router.use(requireAuth);
@@ -211,6 +305,20 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
     res.json({ ok: true });
   });
   router.get('/api/report', async (req, res) => res.json(await buildReport()));
+  router.post('/api/cart-request', async (req, res) => {
+    const out = await createCartRequest();
+    if (out.empty) return res.status(400).json({ error: 'Nothing to order. Count items first, and only items below par go in the carts.' });
+    res.json({
+      ok: true, alreadyQueued: !!out.alreadyQueued,
+      request: { id: out.request.id, createdAt: out.request.createdAt, status: out.request.status, counts: vendorCounts(out.request.payload) },
+    });
+  });
+  router.get('/api/cart-request/latest', async (req, res) => {
+    const latest = await latestCartRequest();
+    res.json({
+      request: latest ? { id: latest.id, createdAt: latest.createdAt, status: latest.status, counts: vendorCounts(latest.payload), result: latest.result, updatedAt: latest.updatedAt } : null,
+    });
+  });
   router.post('/api/restock', async (req, res) => { await restockVendor(String(req.body.vendor || '')); res.json({ ok: true }); });
   router.post('/api/newcount', async (req, res) => { await startNewCount(); res.json({ ok: true }); });
   router.post('/api/item', async (req, res) => {
