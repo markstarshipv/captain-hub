@@ -96,6 +96,13 @@ app.get('/about-captain-mark', (req, res) => res.sendFile(path.join(__dirname, '
 app.get('/about-legacy-yacht', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about-legacy-yacht.html')));
 app.use('/about', express.static(path.join(__dirname, 'public', 'about'), { maxAge: '1h' }));
 
+// ---------------- supply stock photo map (sign-in required) ----------------
+// Static copy of the Starship V supply stock photo map, hosted on the hub
+// itself so it does not live on anyone's personal Google Drive (added
+// 2026-11-12 at Mark's direction). Gated like the programs, since it shows
+// where supplies are stowed aboard.
+app.use('/supply-map', requireAuth, express.static(path.join(__dirname, 'public', 'supply-map'), { maxAge: '1h' }));
+
 // ---------------- storage: one shared pool, or per-module files ------------
 let pool = null;
 if (process.env.DATABASE_URL) {
