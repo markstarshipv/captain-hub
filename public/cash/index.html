@@ -83,6 +83,7 @@
       <button class="btn gold" id="pdfBtn" type="button">Save PDF</button>
       <button class="btn gold" id="xlsxBtn" type="button">Save Excel</button>
       <button class="btn alt" id="csvBtn" type="button">Save CSV</button>
+      <button class="btn alt" id="noteBtn" type="button">Edit statement note</button>
     </div>
   </section>
 </main>
@@ -114,6 +115,17 @@
     <div class="btnrow">
       <button class="btn" type="submit">Save audit</button>
       <button class="btn alt" type="button" id="cancelAuditBtn">Close</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="noteDlg">
+  <form method="dialog" id="noteForm">
+    <h3 style="margin:0">Statement note</h3>
+    <p class="meta" style="font-size:13px;color:#5c6b78">This note prints on every weekly statement sent to Shahzain. Leave it empty for no note.</p>
+    <label>Note<textarea id="n_text" rows="3"></textarea></label>
+    <div class="btnrow">
+      <button class="btn" type="submit">Save note</button>
+      <button class="btn alt" type="button" id="cancelNoteBtn">Cancel</button>
     </div>
   </form>
 </dialog>

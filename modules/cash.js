@@ -180,6 +180,19 @@ function createCash({ pool, dataFile, requireAuth, reportToken }) {
     return { fund: store.data.fund, standingStatementNote: store.data.standingStatementNote || '' };
   }
 
+  async function setStandingNote(note) {
+    const value = String(note || '').trim();
+    if (store.mode === 'pg') {
+      await store.pool.query(
+        `INSERT INTO pc_meta (key, value) VALUES ('standing_statement_note',$1)
+         ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value`, [value]);
+    } else {
+      store.data.standingStatementNote = value;
+      saveFile();
+    }
+    return value;
+  }
+
   async function listTransactions() {
     if (store.mode === 'pg') {
       const { rows } = await store.pool.query(
@@ -368,6 +381,12 @@ function createCash({ pool, dataFile, requireAuth, reportToken }) {
 
   // ---------------- api ----------------
   router.get('/api/state', async (req, res) => res.json(await getState()));
+  router.post('/api/note', async (req, res) => {
+    try {
+      const standingStatementNote = await setStandingNote(req.body.standingStatementNote);
+      res.json({ ok: true, standingStatementNote });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
   router.post('/api/transaction', async (req, res) => {
     try {
       const id = await upsertTransaction(req.body, req.body.id ? Number(req.body.id) : null);

@@ -207,6 +207,15 @@ async function saveFile(url, filename) {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 function exportQuery() { return `?from=${encodeURIComponent($('stFrom').value)}&to=${encodeURIComponent($('stTo').value)}`; }
+$('noteBtn').onclick = () => { $('n_text').value = state.standingStatementNote || ''; $('noteDlg').showModal(); };
+$('cancelNoteBtn').onclick = () => $('noteDlg').close();
+$('noteForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  await api('/cash/api/note', { standingStatementNote: $('n_text').value });
+  $('noteDlg').close();
+  await load();
+  if ($('stFrom').value && $('stTo').value) await loadStatement();
+});
 $('pdfBtn').onclick = () => saveFile('/cash/export/statement.pdf' + exportQuery(), 'Petty-Cash-Statement.pdf');
 $('xlsxBtn').onclick = () => saveFile('/cash/export/statement.xlsx' + exportQuery(), 'Petty-Cash-Statement.xlsx');
 $('csvBtn').onclick = () => saveFile('/cash/export/transactions.csv' + exportQuery(), 'Petty-Cash-Transactions.csv');

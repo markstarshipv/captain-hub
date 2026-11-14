@@ -21,6 +21,7 @@ const path = require('path');
 const { createInventory } = require('./modules/inventory');
 const { createCash } = require('./modules/cash');
 const { createMaintenance } = require('./modules/maintenance');
+const { createChecklist } = require('./modules/checklist');
 const { createTides } = require('./modules/tides');
 const { createInquiries } = require('./modules/inquiries');
 
@@ -125,6 +126,7 @@ const deps = name => ({
 const inventory = createInventory(deps('inventory'));
 const cash = createCash(deps('cash'));
 const maintenance = createMaintenance(deps('maintenance'));
+const checklist = createChecklist(deps('checklist'));
 // Tides is PUBLIC by Mark's decision (2026-11-09): it serves published NOAA
 // predictions and stores nothing, so it gets a pass-through instead of the
 // hub sign-in. Every other program stays behind the password.
@@ -141,6 +143,7 @@ const inquiries = createInquiries({
 app.use('/inventory', inventory.router);
 app.use('/cash', cash.router);
 app.use('/maintenance', maintenance.router);
+app.use('/posttrip', checklist.router);
 app.use('/tides', tides.router);
 app.use('/', inquiries.router);
 
@@ -149,6 +152,6 @@ app.use('/', inquiries.router);
 // pages; the password is asked only when a visitor clicks into a program.
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-Promise.all([inventory.ready, cash.ready, maintenance.ready, tides.ready, inquiries.ready])
+Promise.all([inventory.ready, cash.ready, maintenance.ready, checklist.ready, tides.ready, inquiries.ready])
   .then(() => app.listen(PORT, () => console.log(`Captain Hub listening on ${PORT} (store: ${pool ? 'pg' : 'file'})`)))
   .catch(e => { console.error('Store init failed', e); process.exit(1); });
