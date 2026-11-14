@@ -1,12 +1,28 @@
 'use strict';
+// Shared checklist app for the hub's checklist pages (post-trip,
+// departure, fuelling). Each page sets window.CK with its own run
+// wording before this script loads; the defaults are the post-trip
+// closeout words.
 const $ = id => document.getElementById(id);
+const BASE = location.pathname.replace(/\/+$/, '');
+const L = Object.assign({
+  emptyRun: 'No closeout is open right now. When the boat comes back in, start one and work down the list.',
+  startBtn: 'Start closeout',
+  inProgress: 'Closeout in progress',
+  byLabel: 'Closed out by',
+  noteLabel: 'Close-out note (optional)',
+  notePlaceholder: 'Anything used up, running low, or worth flagging',
+  finishBtn: 'Finish closeout',
+  discardConfirm: 'Discard this closeout without saving it?',
+  historyEmpty: 'No finished closeouts yet.',
+}, window.CK || {});
 let state = null;
 let editing = false;
 
 async function api(path, body) {
   const opts = { headers: { 'Content-Type': 'application/json' } };
   if (body !== undefined) { opts.method = 'POST'; opts.body = JSON.stringify(body); }
-  const r = await fetch(path, opts);
+  const r = await fetch(BASE + path, opts);
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
   return data;
@@ -25,7 +41,7 @@ function fmtDateTime(iso) {
 }
 
 async function load() {
-  state = await api('/posttrip/api/state');
+  state = await api('/api/state');
   render();
 }
 
@@ -44,30 +60,30 @@ function renderRunPanel() {
   const total = state.tasks.length;
   if (!state.openRun) {
     panel.innerHTML = `
-      <div style="font-size:15px;margin-bottom:10px">No closeout is open right now. When the boat comes back in, start one and work down the list.</div>
-      <button class="btn gold big" id="startBtn" type="button">Start closeout</button>`;
-    $('startBtn').onclick = async () => { await api('/posttrip/api/run/start', {}); await load(); };
+      <div style="font-size:15px;margin-bottom:10px">${escapeHtml(L.emptyRun)}</div>
+      <button class="btn gold big" id="startBtn" type="button">${escapeHtml(L.startBtn)}</button>`;
+    $('startBtn').onclick = async () => { await api('/api/run/start', {}); await load(); };
     return;
   }
   const checked = new Set(state.openRun.checkedTaskIds);
   const pct = total ? Math.round(checked.size * 100 / total) : 0;
   panel.innerHTML = `
-    <div style="font-weight:700;font-size:16px">Closeout in progress</div>
+    <div style="font-weight:700;font-size:16px">${escapeHtml(L.inProgress)}</div>
     <div class="progress"><div class="fill" style="width:${pct}%"></div></div>
     <div class="progress-label">${checked.size} of ${total} tasks checked · started ${escapeHtml(fmtDateTime(state.openRun.startedAt))}</div>
-    <label class="flabel">Closed out by<input class="finput" id="finishBy" placeholder="Your name"></label>
-    <label class="flabel">Close-out note (optional)<input class="finput" id="finishNote" placeholder="Anything used up, running low, or worth flagging"></label>
+    <label class="flabel">${escapeHtml(L.byLabel)}<input class="finput" id="finishBy" placeholder="Your name"></label>
+    <label class="flabel">${escapeHtml(L.noteLabel)}<input class="finput" id="finishNote" placeholder="${escapeHtml(L.notePlaceholder)}"></label>
     <div class="btnrow">
-      <button class="btn green" id="finishBtn" type="button">Finish closeout</button>
+      <button class="btn green" id="finishBtn" type="button">${escapeHtml(L.finishBtn)}</button>
       <button class="btn alt" id="cancelRunBtn" type="button">Discard</button>
     </div>`;
   $('finishBtn').onclick = async () => {
-    await api('/posttrip/api/run/finish', { closedBy: $('finishBy').value, note: $('finishNote').value });
+    await api('/api/run/finish', { closedBy: $('finishBy').value, note: $('finishNote').value });
     await load();
   };
   $('cancelRunBtn').onclick = async () => {
-    if (!confirm('Discard this closeout without saving it?')) return;
-    await api('/posttrip/api/run/cancel', {});
+    if (!confirm(L.discardConfirm)) return;
+    await api('/api/run/cancel', {});
     await load();
   };
 }
@@ -100,7 +116,7 @@ function renderTasks() {
   list.querySelectorAll('.task.tappable').forEach(el => {
     el.addEventListener('click', async e => {
       if (e.target.closest('.tools')) return;
-      await api('/posttrip/api/run/toggle', { taskId: Number(el.dataset.id) });
+      await api('/api/run/toggle', { taskId: Number(el.dataset.id) });
       await load();
     });
   });
@@ -109,7 +125,7 @@ function renderTasks() {
       e.stopPropagation();
       const id = Number(btn.dataset.id);
       if (btn.dataset.act === 'edit') return openTaskDialog(id);
-      await api('/posttrip/api/task/move', { id, dir: btn.dataset.act });
+      await api('/api/task/move', { id, dir: btn.dataset.act });
       await load();
     });
   });
@@ -118,14 +134,14 @@ function renderTasks() {
 function renderHistory() {
   const el = $('historyList');
   if (!state.history.length) {
-    el.innerHTML = '<div class="empty">No finished closeouts yet.</div>';
+    el.innerHTML = '<div class="empty">' + escapeHtml(L.historyEmpty) + '</div>';
     return;
   }
   el.innerHTML = state.history.map(h => {
     const pct = h.totalCount ? Math.round(h.checkedCount * 100 / h.totalCount) : 0;
     return `<div class="card">
       <div class="desc">${escapeHtml(fmtDateTime(h.finishedAt))}</div>
-      <div class="meta">${h.checkedCount} of ${h.totalCount} tasks (${pct}%)${h.closedBy ? ' · Closed out by ' + escapeHtml(h.closedBy) : ''}${h.note ? '<br>' + escapeHtml(h.note) : ''}</div>
+      <div class="meta">${h.checkedCount} of ${h.totalCount} tasks (${pct}%)${h.closedBy ? ' · ' + escapeHtml(L.byLabel) + ' ' + escapeHtml(h.closedBy) : ''}${h.note ? '<br>' + escapeHtml(h.note) : ''}</div>
     </div>`;
   }).join('');
 }
@@ -152,8 +168,8 @@ $('addTaskBtn').onclick = () => openTaskDialog(null);
 $('taskCancelBtn').onclick = () => $('taskDlg').close();
 $('taskDeleteBtn').onclick = async () => {
   const id = Number($('t_id').value);
-  if (!id || !confirm('Delete this task from the list? Past closeouts keep their record.')) return;
-  await api('/posttrip/api/task/delete', { id });
+  if (!id || !confirm('Delete this task from the list? Past runs keep their record.')) return;
+  await api('/api/task/delete', { id });
   $('taskDlg').close();
   await load();
 };
@@ -165,7 +181,7 @@ $('taskForm').addEventListener('submit', async e => {
     note: $('t_note').value,
   };
   if ($('t_id').value) body.id = Number($('t_id').value);
-  await api('/posttrip/api/task', body);
+  await api('/api/task', body);
   $('taskDlg').close();
   await load();
 });

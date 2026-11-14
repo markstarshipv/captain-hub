@@ -126,7 +126,15 @@ const deps = name => ({
 const inventory = createInventory(deps('inventory'));
 const cash = createCash(deps('cash'));
 const maintenance = createMaintenance(deps('maintenance'));
-const checklist = createChecklist(deps('checklist'));
+const checklist = createChecklist(deps('checklist'), {
+  seed: require('./seeds/checklist.json'), tablePrefix: 'ck_', page: 'posttrip',
+});
+const departure = createChecklist(deps('checklist-departure'), {
+  seed: require('./seeds/departure.json'), tablePrefix: 'ck_dep_', page: 'departure',
+});
+const fuelling = createChecklist(deps('checklist-fuelling'), {
+  seed: require('./seeds/fuelling.json'), tablePrefix: 'ck_fuel_', page: 'fuelling',
+});
 // Tides is PUBLIC by Mark's decision (2026-11-09): it serves published NOAA
 // predictions and stores nothing, so it gets a pass-through instead of the
 // hub sign-in. Every other program stays behind the password.
@@ -144,6 +152,8 @@ app.use('/inventory', inventory.router);
 app.use('/cash', cash.router);
 app.use('/maintenance', maintenance.router);
 app.use('/posttrip', checklist.router);
+app.use('/departure', departure.router);
+app.use('/fuelling', fuelling.router);
 app.use('/tides', tides.router);
 app.use('/', inquiries.router);
 
@@ -152,6 +162,6 @@ app.use('/', inquiries.router);
 // pages; the password is asked only when a visitor clicks into a program.
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-Promise.all([inventory.ready, cash.ready, maintenance.ready, checklist.ready, tides.ready, inquiries.ready])
+Promise.all([inventory.ready, cash.ready, maintenance.ready, checklist.ready, departure.ready, fuelling.ready, tides.ready, inquiries.ready])
   .then(() => app.listen(PORT, () => console.log(`Captain Hub listening on ${PORT} (store: ${pool ? 'pg' : 'file'})`)))
   .catch(e => { console.error('Store init failed', e); process.exit(1); });
