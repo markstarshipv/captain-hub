@@ -557,6 +557,54 @@
    "lastServicedOn": "2026-11-08",
    "lastNote": "Bolt came out and broke spacer. Reinstalled. Working now.",
    "lastPerformedBy": "MS"
+  },
+  {
+   "id": 46,
+   "name": "Epoxy Chip Repair: Bow Anchor Area",
+   "category": "Repairs",
+   "intervalDays": null,
+   "note": "Epoxy filler chip repair in the bow anchor area, wet sanded flush with the gelcoat.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 47,
+   "name": "Epoxy Chip Repair: Entry Doors (Both)",
+   "category": "Repairs",
+   "intervalDays": null,
+   "note": "Epoxy filler chip repair at both entry doors, wet sanded flush with the gelcoat.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 48,
+   "name": "Epoxy Chip Repair: Flybridge Table",
+   "category": "Repairs",
+   "intervalDays": null,
+   "note": "Epoxy filler chip repair on the flybridge table.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
+  },
+  {
+   "id": 49,
+   "name": "Engine Room: Cleaned and Painted Spots",
+   "category": "Repairs",
+   "intervalDays": null,
+   "note": "Spots in the engine room cleaned and painted.",
+   "meters": [],
+   "archived": false,
+   "lastServicedOn": null,
+   "lastNote": null,
+   "lastPerformedBy": null
   }
  ],
  "hours": [

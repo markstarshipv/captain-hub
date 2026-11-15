@@ -53,6 +53,9 @@
   dialog .checks input{width:auto}
   .histline{border-bottom:1px solid var(--line);padding:8px 0;font-size:14px}
   .histline .meta{font-size:12px;color:var(--mut)}
+  .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .thumbs a img{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
+  .thumbs img.prev{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
   .logout{float:right;color:#b9cbdd;font-size:12px}
   .checkrow{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut);margin:6px 0}
 </style>
@@ -109,6 +112,8 @@
     <label>Date serviced<input id="l_date" type="date" required></label>
     <label>Performed by<input id="l_by" required></label>
     <label>Note<textarea id="l_note" rows="3"></textarea></label>
+    <label>Photos (optional)<input id="l_photos" type="file" accept="image/*" multiple></label>
+    <div class="thumbs" id="l_photoPreview"></div>
     <div id="l_hoursWrap"></div>
     <div class="btnrow">
       <button class="btn" id="saveLogBtn" type="submit">Save entry</button>
@@ -137,6 +142,7 @@
   <div id="histBody"></div>
   <div class="btnrow"><button class="btn alt" type="button" id="closeHistBtn">Close</button></div>
 </dialog>
+<input type="file" id="photoFile" accept="image/*" style="display:none">
 <style>
 .sv-byline{max-width:560px;margin:14px auto 0;padding:20px 16px 30px;text-align:center;border-top:1px solid #dde4ea;color:#5b7183;font-size:13.5px;line-height:1.65;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
 .sv-byline .who{letter-spacing:1.6px;text-transform:uppercase;font-size:12px;color:#8496a5}

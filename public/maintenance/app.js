@@ -2,6 +2,7 @@
 const $ = id => document.getElementById(id);
 let items = [], counts = null, pumps = null, hours = {}, meters = [], pumpNames = [];
 let activeCat = null, attentionOnly = false;
+let stagedPhotos = [], photoTargetLogId = null, histItem = null;
 
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -142,6 +143,35 @@ $('tabReport').onclick = () => showTab('report');
 $('showAll').onclick = () => { activeCat = null; renderPills(); renderCards(); };
 $('search').oninput = renderCards;
 $('showArchived').onchange = renderCards;
+// ---- entry photos ----
+function readAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+function renderStagedPhotos() {
+  $('l_photoPreview').innerHTML = stagedPhotos.map(d => `<img class="prev" src="${d}" alt="Photo to attach">`).join('');
+}
+$('l_photos').addEventListener('change', async () => {
+  const files = [...$('l_photos').files];
+  $('l_photos').value = '';
+  for (const f of files) stagedPhotos.push(await readAsDataUrl(f));
+  renderStagedPhotos();
+});
+$('photoFile').addEventListener('change', async () => {
+  const file = $('photoFile').files[0];
+  $('photoFile').value = '';
+  if (!file || !photoTargetLogId) return;
+  try {
+    const dataUrl = await readAsDataUrl(file);
+    await api('/maintenance/api/photo', { logId: photoTargetLogId, dataUrl });
+    photoTargetLogId = null;
+    if (histItem) openHistory(histItem);
+  } catch (err) { alert(err.message); }
+});
 // ---- log service ----
 function openLog(it) {
   $('logDlgTitle').textContent = 'Log service: ' + it.name;
@@ -149,6 +179,9 @@ function openLog(it) {
   $('l_date').value = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   $('l_by').value = 'MS';
   $('l_note').value = '';
+  stagedPhotos = [];
+  $('l_photos').value = '';
+  renderStagedPhotos();
   const wrap = $('l_hoursWrap');
   wrap.innerHTML = '';
   for (const key of (it.meters || [])) {
@@ -168,19 +201,27 @@ $('logForm').addEventListener('submit', async e => {
     if (inp.value !== '') hoursAtService[inp.dataset.meter] = Number(inp.value);
   });
   try {
-    await api('/maintenance/api/log', {
+    const saved = await api('/maintenance/api/log', {
       itemId: Number($('l_itemId').value),
       servicedOn: $('l_date').value,
       performedBy: $('l_by').value,
       note: $('l_note').value,
       hoursAtService,
     });
+    let photoErr = null;
+    for (const dataUrl of stagedPhotos) {
+      try { await api('/maintenance/api/photo', { logId: saved.id, dataUrl }); }
+      catch (err) { photoErr = err; }
+    }
+    stagedPhotos = [];
     $('logDlg').close();
     await load();
+    if (photoErr) alert('Entry saved, but a photo failed to upload: ' + photoErr.message);
   } catch (err) { alert(err.message); }
 });
 // ---- history ----
 async function openHistory(it) {
+  histItem = it;
   $('histTitle').textContent = 'History: ' + it.name;
   const data = await api('/maintenance/api/history?itemId=' + it.id);
   const body = $('histBody');
@@ -192,10 +233,15 @@ async function openHistory(it) {
         return `${m ? m.label : k}: ${fmtNum(v)}`;
       }).join(' · ') : '';
       const stamp = l.createdAt ? new Date(l.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-      return `<div class="histline"><strong>${fmtDate(l.servicedOn)}</strong>, by ${escapeHtml(l.performedBy)}<div>${escapeHtml(l.note || '')}</div>${hrs ? `<div class="meta">${escapeHtml(hrs)}</div>` : ''}<div class="meta">Logged ${escapeHtml(stamp)}</div></div>`;
+      const thumbs = (l.photos || []).map(p =>
+        `<a href="/maintenance/photo/${l.id}/${p.id}" target="_blank" rel="noopener"><img src="/maintenance/photo/${l.id}/${p.id}" alt="Entry photo" loading="lazy"></a>`).join('');
+      return `<div class="histline"><strong>${fmtDate(l.servicedOn)}</strong>, by ${escapeHtml(l.performedBy)}<div>${escapeHtml(l.note || '')}</div>${hrs ? `<div class="meta">${escapeHtml(hrs)}</div>` : ''}<div class="meta">Logged ${escapeHtml(stamp)}</div>${thumbs ? `<div class="thumbs">${thumbs}</div>` : ''}<div><button class="editbtn" type="button" data-photo="${l.id}">Add photo</button></div></div>`;
     }).join('');
+    body.querySelectorAll('[data-photo]').forEach(b => {
+      b.onclick = () => { photoTargetLogId = Number(b.dataset.photo); $('photoFile').click(); };
+    });
   }
-  $('histDlg').showModal();
+  if (!$('histDlg').open) $('histDlg').showModal();
 }
 $('closeHistBtn').onclick = () => $('histDlg').close();
 // ---- item editor ----

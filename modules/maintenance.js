@@ -91,6 +91,7 @@ function createMaintenance({ pool, dataFile, requireAuth, reportToken }) {
       nextItemId: Math.max(...items.map(i => i.id)) + 1,
       nextLogId: logId,
       nextHourId: hours.length + 1,
+      nextPhotoId: 1,
       items, logs, hours,
     };
   }
@@ -122,6 +123,13 @@ function createMaintenance({ pool, dataFile, requireAuth, reportToken }) {
         value NUMERIC NOT NULL,
         logged_on DATE NOT NULL,
         performed_by TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS mt_photos (
+        id SERIAL PRIMARY KEY,
+        log_id INTEGER NOT NULL REFERENCES mt_logs(id) ON DELETE CASCADE,
+        mime TEXT NOT NULL,
+        data BYTEA NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`);
       const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM mt_items');
@@ -156,6 +164,7 @@ function createMaintenance({ pool, dataFile, requireAuth, reportToken }) {
       id: r.id, itemId: r.item_id, servicedOn: r.serviced_on,
       performedBy: r.performed_by, note: r.note || '',
       hoursAtService: r.hours_at_service || null,
+      photos: [],
       createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
     };
   }
@@ -177,9 +186,19 @@ function createMaintenance({ pool, dataFile, requireAuth, reportToken }) {
   async function listLogs() {
     if (store.mode === 'pg') {
       const { rows } = await store.pool.query('SELECT id, item_id, serviced_on::text AS serviced_on, performed_by, note, hours_at_service, created_at FROM mt_logs ORDER BY serviced_on DESC, id DESC');
-      return rows.map(pgLog);
+      const logs = rows.map(pgLog);
+      // Photo metadata only (id and mime); the bytes are served separately
+      // through /photo/:logId/:photoId, the same split the cash module uses
+      // for receipt photos.
+      const { rows: photos } = await store.pool.query('SELECT id, log_id, mime FROM mt_photos ORDER BY id');
+      const byLog = {};
+      for (const p of photos) (byLog[p.log_id] = byLog[p.log_id] || []).push({ id: p.id, mime: p.mime });
+      for (const l of logs) l.photos = byLog[l.id] || [];
+      return logs;
     }
-    return [...store.data.logs].sort((a, b) => (b.servicedOn < a.servicedOn ? -1 : b.servicedOn > a.servicedOn ? 1 : b.id - a.id));
+    return [...store.data.logs]
+      .sort((a, b) => (b.servicedOn < a.servicedOn ? -1 : b.servicedOn > a.servicedOn ? 1 : b.id - a.id))
+      .map(l => ({ ...l, photos: (l.photos || []).map(p => ({ id: p.id, mime: p.mime })) }));
   }
   async function listHours() {
     if (store.mode === 'pg') {
@@ -202,6 +221,34 @@ function createMaintenance({ pool, dataFile, requireAuth, reportToken }) {
     store.data.logs.push({ id, ...entry, note: entry.note || '', createdAt });
     saveFile();
     return id;
+  }
+  async function addPhoto(logId, mime, buffer) {
+    if (store.mode === 'pg') {
+      const { rows } = await store.pool.query(
+        `INSERT INTO mt_photos (log_id, mime, data) VALUES ($1,$2,$3) RETURNING id`,
+        [logId, mime, buffer]
+      );
+      return rows[0].id;
+    }
+    const l = store.data.logs.find(x => x.id === logId);
+    if (!l) throw new Error('Entry not found');
+    if (!l.photos) l.photos = [];
+    if (!store.data.nextPhotoId) store.data.nextPhotoId = 1;
+    const id = store.data.nextPhotoId++;
+    l.photos.push({ id, mime, data: buffer.toString('base64') });
+    saveFile();
+    return id;
+  }
+  async function getPhoto(logId, photoId) {
+    if (store.mode === 'pg') {
+      const { rows } = await store.pool.query('SELECT mime, data FROM mt_photos WHERE log_id=$1 AND id=$2', [logId, photoId]);
+      if (!rows.length) return null;
+      return { mime: rows[0].mime, data: rows[0].data };
+    }
+    const l = store.data.logs.find(x => x.id === logId);
+    const p = l && (l.photos || []).find(x => x.id === photoId);
+    if (!p) return null;
+    return { mime: p.mime || 'image/jpeg', data: Buffer.from(p.data, 'base64') };
   }
   async function addHourReading(reading) {
     if (store.mode === 'pg') {
@@ -403,6 +450,25 @@ function createMaintenance({ pool, dataFile, requireAuth, reportToken }) {
     }
     const id = await addLog({ itemId, servicedOn, performedBy, note: String(req.body.note || ''), hoursAtService });
     res.json({ ok: true, id });
+  });
+  // Entry photos, the cash module's receipt pattern extended to more than
+  // one photo per entry: upload takes a data URL, serving returns the bytes.
+  router.post('/api/photo', async (req, res) => {
+    try {
+      const logId = Number(req.body.logId);
+      const m = /^data:([^;]+);base64,(.+)$/.exec(String(req.body.dataUrl || ''));
+      if (!logId || !m) return res.status(400).json({ error: 'Bad photo upload' });
+      const logs = await listLogs();
+      if (!logs.find(l => l.id === logId)) return res.status(400).json({ error: 'Unknown entry' });
+      const photoId = await addPhoto(logId, m[1], Buffer.from(m[2], 'base64'));
+      res.json({ ok: true, photoId });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  router.get('/photo/:logId/:photoId', async (req, res) => {
+    const r = await getPhoto(Number(req.params.logId), Number(req.params.photoId));
+    if (!r) return res.status(404).send('No photo stored for this entry.');
+    res.setHeader('Content-Type', r.mime);
+    res.send(r.data);
   });
   router.post('/api/hours', async (req, res) => {
     const performedBy = String(req.body.performedBy || '').trim();
