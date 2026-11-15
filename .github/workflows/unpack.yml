@@ -14,7 +14,8 @@ jobs:
         run: |
           set -e
           unzip -o hub-upload.zip -d /tmp/hub
-          ls -R /tmp/hub
+          chmod -R u+rX /tmp/hub
+          ls -R /tmp/hub || true
           TOP_COUNT=$(ls -1 /tmp/hub | wc -l)
           TOP_NAME=$(ls -1 /tmp/hub | head -n 1)
           if [ "$TOP_COUNT" = "1" ] && [ -d "/tmp/hub/$TOP_NAME" ]; then SRC="/tmp/hub/$TOP_NAME"; else SRC="/tmp/hub"; fi
