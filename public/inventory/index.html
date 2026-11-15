@@ -27,7 +27,10 @@
   .banner.show{display:flex;justify-content:space-between;align-items:center}
   .banner button{border:0;background:none;color:#8a6d00;font-weight:700;cursor:pointer}
   .search{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px;margin-bottom:10px}
+  .carriedline{font-size:12.5px;color:#ffd968;margin-top:10px}
   .card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .card.carried{background:#f7f9fb}
+  .carriedtag{font-size:11px;font-weight:700;color:var(--mut);background:#e8edf1;border-radius:999px;padding:2px 7px;text-transform:uppercase;letter-spacing:.03em}
   .card .nm{font-weight:700;font-size:15px}
   .card .meta{font-size:12px;color:var(--mut);margin-top:2px}
   .card .note{font-size:12px;color:#7a5b00;background:#fff8e1;border-radius:6px;padding:4px 6px;margin-top:6px}
@@ -37,6 +40,7 @@
   .stepper{margin-left:auto;display:flex;align-items:center;gap:6px}
   .stepper button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:20px;cursor:pointer}
   .stepper input{width:64px;text-align:center;font-size:16px;padding:8px 4px;border:1px solid var(--line);border-radius:8px}
+  .stepper input.carried{background:#eef1f4;color:var(--mut)}
   .editbtn{border:0;background:none;color:var(--mut);font-size:12px;cursor:pointer;text-decoration:underline}
   .vendor{margin-bottom:18px} .vendor h3{margin:14px 0 6px;font-size:16px;color:var(--navy)}
   .oline{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:14px}
@@ -61,6 +65,7 @@
     <button class="tile" id="tileOrder" type="button"><div class="n" id="tileToOrder">0</div><div class="l">Items to order</div><div class="hint">View order report</div></button>
     <div class="tile"><div class="n" id="tileReorder">0</div><div class="l">At reorder point</div></div>
   </div>
+  <div class="carriedline" id="carriedLine" style="display:none"></div>
 </header>
 <nav class="tabs">
   <button id="tabCount" class="on" type="button">Count</button>

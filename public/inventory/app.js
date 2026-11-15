@@ -22,6 +22,10 @@ async function load() {
   $('tileCounted').textContent = data.counted + ' of ' + data.total;
   $('tileToOrder').textContent = data.toOrder;
   $('tileReorder').textContent = data.reorderCount;
+  const carriedN = items.filter(i => i.carried).length;
+  const cl = $('carriedLine');
+  if (carriedN) { cl.style.display = ''; cl.textContent = carriedN + ' items still showing the last count, tap a value to confirm or adjust it.'; }
+  else cl.style.display = 'none';
   renderPills(); renderCards();
 }
 function categories() {
@@ -74,7 +78,7 @@ function renderCards() {
       wrap.appendChild(h);
     }
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = 'card' + (it.carried ? ' carried' : '');
     const note = it.notes ? `<div class="note">${escapeHtml(it.notes)}</div>` : '';
     const countedAt = it.lastCountedAt ? new Date(it.lastCountedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     card.innerHTML = `
@@ -84,10 +88,11 @@ function renderCards() {
       <div class="row">
         <span class="chip ${it.status}">${chipText(it.status)}</span>
         ${countedAt ? `<span class="meta">${countedAt}</span>` : ''}
+        ${it.carried ? '<span class="carriedtag">Carried</span>' : ''}
         <button class="editbtn" type="button">Edit</button>
         <div class="stepper">
           <button type="button" data-d="-0.25">−</button>
-          <input type="number" step="0.25" min="0" inputmode="decimal" value="${it.currentCount === null ? '' : fmt(it.currentCount)}" placeholder="0">
+          <input type="number" step="0.25" min="0" inputmode="decimal" ${it.carried ? 'class="carried" ' : ''}value="${it.currentCount === null ? '' : fmt(it.currentCount)}" placeholder="0">
           <button type="button" data-d="0.25">+</button>
         </div>
       </div>`;
@@ -127,7 +132,7 @@ $('tileOrder').onclick = () => showTab(true);
 $('showAll').onclick = () => { activeCat = null; renderPills(); renderCards(); };
 $('search').oninput = renderCards;
 $('newCountBtn').onclick = async () => {
-  if (confirm('Start a new count? This clears every count entered so far.')) { await api('/inventory/api/newcount', {}); await load(); }
+  if (confirm('Start a new count? Last counts carry forward, you only need to enter adjustments.')) { await api('/inventory/api/newcount', {}); await load(); }
 };
 // ---- order report ----
 let lastReport = null;

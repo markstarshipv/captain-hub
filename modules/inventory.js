@@ -51,6 +51,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
         current_count NUMERIC,
         last_counted_at TIMESTAMPTZ
       )`);
+      await pool.query(`ALTER TABLE items ADD COLUMN IF NOT EXISTS carried BOOLEAN DEFAULT FALSE`);
       const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM items');
       if (rows[0].n === 0) {
         for (const s of seed) {
@@ -75,7 +76,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
       if (fs.existsSync(dataFile)) {
         data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
       } else {
-        data = { nextId: seed.length + 1, items: seed.map((s, i) => ({ id: i + 1, ...s, currentCount: null, lastCountedAt: null })) };
+        data = { nextId: seed.length + 1, items: seed.map((s, i) => ({ id: i + 1, ...s, currentCount: null, lastCountedAt: null, carried: false })) };
         fs.writeFileSync(dataFile, JSON.stringify(data, null, 1));
       }
       if (!Array.isArray(data.cartRequests)) data.cartRequests = [];
@@ -94,6 +95,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
       cadence: r.cadence, sortOrder: r.sort_order !== undefined ? r.sort_order : r.sortOrder,
       currentCount: (r.current_count !== undefined ? r.current_count : r.currentCount) === null ? null : Number(r.current_count !== undefined ? r.current_count : r.currentCount),
       lastCountedAt: (r.last_counted_at !== undefined ? r.last_counted_at : r.lastCountedAt) || null,
+      carried: !!r.carried,
     };
   }
 
@@ -102,7 +104,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
       const { rows } = await store.pool.query('SELECT * FROM items ORDER BY sort_order, id');
       return rows.map(rowToItem);
     }
-    return [...store.data.items].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id));
+    return [...store.data.items].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)).map(it => ({ ...it, carried: !!it.carried }));
   }
   function saveFile() {
     if (store.mode === 'file') fs.writeFileSync(store.file, JSON.stringify(store.data, null, 1));
@@ -110,10 +112,10 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
   async function updateCount(id, count) {
     const now = new Date().toISOString();
     if (store.mode === 'pg') {
-      await store.pool.query('UPDATE items SET current_count=$1, last_counted_at=$2 WHERE id=$3', [count, now, id]);
+      await store.pool.query('UPDATE items SET current_count=$1, last_counted_at=$2, carried=FALSE WHERE id=$3', [count, now, id]);
     } else {
       const it = store.data.items.find(i => i.id === id);
-      if (it) { it.currentCount = count; it.lastCountedAt = now; }
+      if (it) { it.currentCount = count; it.lastCountedAt = now; it.carried = false; }
       saveFile();
     }
   }
@@ -123,20 +125,24 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
     for (const it of items) {
       if (it.vendor === vendor && it.currentCount !== null && Number(it.currentCount) < Number(it.parQty)) {
         if (store.mode === 'pg') {
-          await store.pool.query('UPDATE items SET current_count=$1, last_counted_at=$2 WHERE id=$3', [it.parQty, now, it.id]);
+          await store.pool.query('UPDATE items SET current_count=$1, last_counted_at=$2, carried=FALSE WHERE id=$3', [it.parQty, now, it.id]);
         } else {
           const f = store.data.items.find(i => i.id === it.id);
-          if (f) { f.currentCount = Number(it.parQty); f.lastCountedAt = now; }
+          if (f) { f.currentCount = Number(it.parQty); f.lastCountedAt = now; f.carried = false; }
         }
       }
     }
     saveFile();
   }
   async function startNewCount() {
+    // Counts carry forward: nothing is cleared. Every item that has a count
+    // is flagged carried (last round's value, not yet confirmed this round)
+    // until its count is saved again. Timestamps stay as they are: they show
+    // when the standing value was actually entered.
     if (store.mode === 'pg') {
-      await store.pool.query('UPDATE items SET current_count=NULL, last_counted_at=NULL');
+      await store.pool.query('UPDATE items SET carried=TRUE WHERE current_count IS NOT NULL');
     } else {
-      store.data.items.forEach(i => { i.currentCount = null; i.lastCountedAt = null; });
+      store.data.items.forEach(i => { if (i.currentCount !== null && i.currentCount !== undefined) i.carried = true; });
       saveFile();
     }
   }
@@ -166,7 +172,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
       return id;
     }
     const nid = store.data.nextId++;
-    store.data.items.push({ id: nid, ...vals, currentCount: null, lastCountedAt: null });
+    store.data.items.push({ id: nid, ...vals, currentCount: null, lastCountedAt: null, carried: false });
     saveFile();
     return nid;
   }
