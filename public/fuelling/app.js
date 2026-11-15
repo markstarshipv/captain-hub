@@ -39,6 +39,17 @@ function fmtDateTime(iso) {
     hour: 'numeric', minute: '2-digit',
   }).format(new Date(iso));
 }
+function fmtTime(iso) {
+  if (!iso) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit',
+  }).format(new Date(iso));
+}
+function personName() {
+  const el = $('personName');
+  const v = el ? el.value.trim() : '';
+  return v || (localStorage.getItem('ckPerson') || '');
+}
 
 async function load() {
   state = await api('/api/state');
@@ -71,12 +82,20 @@ function renderRunPanel() {
     <div style="font-weight:700;font-size:16px">${escapeHtml(L.inProgress)}</div>
     <div class="progress"><div class="fill" style="width:${pct}%"></div></div>
     <div class="progress-label">${checked.size} of ${total} tasks checked · started ${escapeHtml(fmtDateTime(state.openRun.startedAt))}</div>
+    <label class="flabel">Who is working<input class="finput" id="personName" placeholder="Your name, for example Kori"></label>
+    <div class="progress-label">Every task you check is stamped with this name and the time, so we know who did what. Change the name when a different person takes over.</div>
     <label class="flabel">${escapeHtml(L.byLabel)}<input class="finput" id="finishBy" placeholder="Your name"></label>
     <label class="flabel">${escapeHtml(L.noteLabel)}<input class="finput" id="finishNote" placeholder="${escapeHtml(L.notePlaceholder)}"></label>
     <div class="btnrow">
       <button class="btn green" id="finishBtn" type="button">${escapeHtml(L.finishBtn)}</button>
       <button class="btn alt" id="cancelRunBtn" type="button">Discard</button>
     </div>`;
+  const savedPerson = localStorage.getItem('ckPerson') || '';
+  if (savedPerson) { $('personName').value = savedPerson; $('finishBy').value = savedPerson; }
+  $('personName').addEventListener('input', () => {
+    localStorage.setItem('ckPerson', $('personName').value.trim());
+    $('finishBy').value = $('personName').value;
+  });
   $('finishBtn').onclick = async () => {
     await api('/api/run/finish', { closedBy: $('finishBy').value, note: $('finishNote').value });
     await load();
@@ -97,11 +116,13 @@ function renderTasks() {
     html += `<h2 class="section">${escapeHtml(g.name)}</h2>`;
     for (const t of g.tasks) {
       const done = checked.has(t.id);
+      const byInfo = done && state.openRun && state.openRun.checkedBy ? state.openRun.checkedBy[String(t.id)] : null;
       html += `<div class="task ${inRun ? 'tappable' : ''} ${done ? 'done' : ''}" data-id="${t.id}">
         ${inRun ? `<div class="box">${done ? '&#10003;' : ''}</div>` : ''}
         <div>
           <div class="title">${escapeHtml(t.title)}</div>
           ${t.note ? `<div class="note">${escapeHtml(t.note)}</div>` : ''}
+          ${byInfo && byInfo.by ? `<div class="by">Done by ${escapeHtml(byInfo.by)}${byInfo.at ? ' · ' + escapeHtml(fmtTime(byInfo.at)) : ''}</div>` : ''}
         </div>
         ${editing ? `<div class="tools">
           <button class="toolbtn" data-act="up" data-id="${t.id}" type="button">Up</button>
@@ -116,7 +137,17 @@ function renderTasks() {
   list.querySelectorAll('.task.tappable').forEach(el => {
     el.addEventListener('click', async e => {
       if (e.target.closest('.tools')) return;
-      await api('/api/run/toggle', { taskId: Number(el.dataset.id) });
+      const taskId = Number(el.dataset.id);
+      const isDone = state.openRun && state.openRun.checkedTaskIds.includes(taskId);
+      const by = personName();
+      if (!isDone && !by) {
+        alert('Put your name in "Who is working" at the top first, so we know who did this task.');
+        $('runPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const pn = $('personName');
+        if (pn) pn.focus();
+        return;
+      }
+      await api('/api/run/toggle', { taskId, by });
       await load();
     });
   });
@@ -139,9 +170,19 @@ function renderHistory() {
   }
   el.innerHTML = state.history.map(h => {
     const pct = h.totalCount ? Math.round(h.checkedCount * 100 / h.totalCount) : 0;
+    const groups = new Map();
+    for (const id of (h.checkedTaskIds || [])) {
+      const t = state.tasks.find(x => x.id === id);
+      const info = h.checkedBy ? h.checkedBy[String(id)] : null;
+      const who = (info && info.by) ? info.by : 'No name recorded';
+      if (!groups.has(who)) groups.set(who, []);
+      groups.get(who).push(t ? t.title : ('Task ' + id));
+    }
+    const whoHtml = [...groups.entries()].map(([who, titles]) =>
+      `<br><strong>${escapeHtml(who)}:</strong> ${titles.map(escapeHtml).join(', ')}`).join('');
     return `<div class="card">
       <div class="desc">${escapeHtml(fmtDateTime(h.finishedAt))}</div>
-      <div class="meta">${h.checkedCount} of ${h.totalCount} tasks (${pct}%)${h.closedBy ? ' · ' + escapeHtml(L.byLabel) + ' ' + escapeHtml(h.closedBy) : ''}${h.note ? '<br>' + escapeHtml(h.note) : ''}</div>
+      <div class="meta">${h.checkedCount} of ${h.totalCount} tasks (${pct}%)${h.closedBy ? ' · ' + escapeHtml(L.byLabel) + ' ' + escapeHtml(h.closedBy) : ''}${h.note ? '<br>' + escapeHtml(h.note) : ''}${whoHtml}</div>
     </div>`;
   }).join('');
 }

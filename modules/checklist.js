@@ -162,8 +162,10 @@ function createChecklist({ pool, dataFile, requireAuth, reportToken }, cfg) {
         closed_by TEXT DEFAULT '',
         note TEXT DEFAULT '',
         checked_ids TEXT DEFAULT '[]',
+        checked_by TEXT DEFAULT '{}',
         total_count INTEGER
       )`);
+      await pool.query(`ALTER TABLE ${RUNS} ADD COLUMN IF NOT EXISTS checked_by TEXT DEFAULT '{}'`);
       store = { mode: 'pg', pool };
       if (!(await pgGetMeta('seeded'))) await seedFresh();
       else if (Number((await pgGetMeta('seed_version')) || 1) < (seed.version || 1)) await reconcile();
@@ -209,6 +211,8 @@ function createChecklist({ pool, dataFile, requireAuth, reportToken }, cfg) {
   }
   function rowToRun(r) {
     const checked = JSON.parse(r.checked_ids || '[]');
+    let checkedBy = {};
+    try { checkedBy = JSON.parse(r.checked_by || '{}'); } catch (e) { checkedBy = {}; }
     return {
       id: r.id,
       startedAt: r.started_at instanceof Date ? r.started_at.toISOString() : r.started_at,
@@ -216,6 +220,7 @@ function createChecklist({ pool, dataFile, requireAuth, reportToken }, cfg) {
       closedBy: r.closed_by || '',
       note: r.note || '',
       checkedTaskIds: checked,
+      checkedBy,
       checkedCount: checked.length,
       totalCount: r.total_count === null || r.total_count === undefined ? null : Number(r.total_count),
     };
@@ -257,11 +262,15 @@ function createChecklist({ pool, dataFile, requireAuth, reportToken }, cfg) {
       .map(r => ({
         id: r.id, finishedAt: r.finishedAt, closedBy: r.closedBy, note: r.note,
         checkedCount: (r.checkedTaskIds || []).length, totalCount: r.totalCount,
+        checkedTaskIds: r.checkedTaskIds || [], checkedBy: r.checkedBy || {},
       }));
     return {
       sections: sectionOrder,
       tasks,
-      openRun: open ? { id: open.id, startedAt: open.startedAt, checkedTaskIds: open.checkedTaskIds } : null,
+      openRun: open ? {
+        id: open.id, startedAt: open.startedAt, checkedTaskIds: open.checkedTaskIds,
+        checkedBy: open.checkedBy || {},
+      } : null,
       history,
     };
   }
@@ -326,14 +335,19 @@ function createChecklist({ pool, dataFile, requireAuth, reportToken }, cfg) {
       const st = await getState();
       if (st.openRun && st.openRun.checkedTaskIds.includes(id)) {
         const ids = st.openRun.checkedTaskIds.filter(x => x !== id);
-        await store.pool.query(`UPDATE ${RUNS} SET checked_ids=$1 WHERE id=$2`,
-          [JSON.stringify(ids), st.openRun.id]);
+        const byMap = { ...(st.openRun.checkedBy || {}) };
+        delete byMap[String(id)];
+        await store.pool.query(`UPDATE ${RUNS} SET checked_ids=$1, checked_by=$2 WHERE id=$3`,
+          [JSON.stringify(ids), JSON.stringify(byMap), st.openRun.id]);
       }
       return;
     }
     store.data.tasks = store.data.tasks.filter(t => t.id !== id);
     const open = store.data.runs.find(r => !r.finishedAt);
-    if (open) open.checkedTaskIds = open.checkedTaskIds.filter(x => x !== id);
+    if (open) {
+      open.checkedTaskIds = open.checkedTaskIds.filter(x => x !== id);
+      if (open.checkedBy) delete open.checkedBy[String(id)];
+    }
     saveFile();
   }
 
@@ -370,23 +384,31 @@ function createChecklist({ pool, dataFile, requireAuth, reportToken }, cfg) {
     const id = store.data.nextRunId++;
     store.data.runs.push({
       id, startedAt: now, finishedAt: null, closedBy: '', note: '',
-      checkedTaskIds: [], totalCount: null,
+      checkedTaskIds: [], checkedBy: {}, totalCount: null,
     });
     saveFile();
     return id;
   }
 
-  async function toggleTask(taskId) {
+  async function toggleTask(taskId, by) {
     const st = await getState();
     if (!st.openRun) throw new Error('No run is open');
     let ids = [...st.openRun.checkedTaskIds];
-    ids = ids.includes(taskId) ? ids.filter(x => x !== taskId) : [...ids, taskId];
+    const byMap = { ...(st.openRun.checkedBy || {}) };
+    if (ids.includes(taskId)) {
+      ids = ids.filter(x => x !== taskId);
+      delete byMap[String(taskId)];
+    } else {
+      ids = [...ids, taskId];
+      byMap[String(taskId)] = { by: String(by || '').trim(), at: new Date().toISOString() };
+    }
     if (store.mode === 'pg') {
-      await store.pool.query(`UPDATE ${RUNS} SET checked_ids=$1 WHERE id=$2`,
-        [JSON.stringify(ids), st.openRun.id]);
+      await store.pool.query(`UPDATE ${RUNS} SET checked_ids=$1, checked_by=$2 WHERE id=$3`,
+        [JSON.stringify(ids), JSON.stringify(byMap), st.openRun.id]);
     } else {
       const run = store.data.runs.find(r => r.id === st.openRun.id);
       run.checkedTaskIds = ids;
+      run.checkedBy = byMap;
       saveFile();
     }
     return ids;
@@ -459,7 +481,7 @@ function createChecklist({ pool, dataFile, requireAuth, reportToken }, cfg) {
   });
   router.post('/api/run/toggle', async (req, res) => {
     try {
-      const checkedTaskIds = await toggleTask(Number(req.body.taskId));
+      const checkedTaskIds = await toggleTask(Number(req.body.taskId), req.body.by);
       res.json({ ok: true, checkedTaskIds });
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
