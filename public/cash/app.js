@@ -146,17 +146,32 @@ $('auditBtn').onclick = () => {
   $('a_by').value = '';
   $('a_note').value = '';
   $('auditResult').textContent = '';
+  const btn = $('auditSaveBtn');
+  btn.disabled = false;
+  btn.textContent = 'Save audit';
   $('auditDlg').showModal();
 };
 $('cancelAuditBtn').onclick = () => $('auditDlg').close();
 $('auditForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const res = await api('/cash/api/audit', { countedAmount: $('a_counted').value, countedBy: $('a_by').value, note: $('a_note').value });
-  const a = res.audit;
-  $('auditResult').textContent = a.differenceCents === 0
-    ? 'Balanced. Counted cash matches the book balance exactly.'
-    : a.status + ' by ' + money(Math.abs(a.differenceCents)) + '. Counted ' + money(a.countedCents) + ', book balance ' + money(a.expectedCents) + '.';
-  await load();
+  const btn = $('auditSaveBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    const res = await api('/cash/api/audit', { countedAmount: $('a_counted').value, countedBy: $('a_by').value, note: $('a_note').value });
+    const a = res.audit;
+    $('auditResult').textContent = a.differenceCents === 0
+      ? 'Saved. Balanced: counted cash matches the book balance exactly.'
+      : 'Saved. ' + a.status + ' by ' + money(Math.abs(a.differenceCents)) + '. Counted ' + money(a.countedCents) + ', book balance ' + money(a.expectedCents) + '.';
+    btn.textContent = 'Saved';
+    await load();
+    setTimeout(() => $('auditDlg').close(), 1500);
+  } catch (err) {
+    $('auditResult').textContent = 'Not saved. ' + (err.message || 'Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Save audit';
+  }
 });
 // ---- statement ----
 function initStatementDates() {

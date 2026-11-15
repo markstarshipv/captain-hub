@@ -330,6 +330,28 @@ function createCash({ pool, dataFile, requireAuth, reportToken }) {
     return { ...audit, status: auditStatus(audit) };
   }
 
+  // Remove duplicate audits: identical counted/expected/difference/by/note
+  // groups keep only their newest entry. Used to clean up accidental
+  // multi-saves from the audit dialog.
+  async function dedupeAudits() {
+    const audits = await listAudits(); // newest first
+    const seen = new Set();
+    const remove = [];
+    for (const a of audits) {
+      const key = [a.countedCents, a.expectedCents, a.differenceCents, a.countedBy, a.note].join('|');
+      if (seen.has(key)) remove.push(a.id); else seen.add(key);
+    }
+    if (remove.length) {
+      if (store.mode === 'pg') {
+        await store.pool.query('DELETE FROM pc_audits WHERE id = ANY($1)', [remove]);
+      } else {
+        store.data.audits = store.data.audits.filter(a => !remove.includes(a.id));
+        saveFile();
+      }
+    }
+    return remove;
+  }
+
   // ---------------- statement builder ----------------
   async function buildStatement(from, to) {
     const { fund, standingStatementNote } = await getFund();
@@ -375,6 +397,13 @@ function createCash({ pool, dataFile, requireAuth, reportToken }) {
       audits: state.audits,
       statement: period,
     });
+  });
+
+  // Token-protected duplicate-audit cleanup, same trust level as the feed.
+  router.post('/api/audit/dedupe', async (req, res) => {
+    if (!reportToken || req.query.token !== reportToken) return res.status(403).json({ error: 'Forbidden' });
+    try { res.json({ ok: true, removed: await dedupeAudits() }); }
+    catch (e) { res.status(400).json({ error: e.message }); }
   });
 
   router.use(requireAuth);
