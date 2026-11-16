@@ -12,18 +12,31 @@ const path = require('path');
 
 const seed = require('../seeds/inventory.json');
 
+function rawOrderQty(it) {
+  return (it.currentCount === null || it.currentCount === undefined)
+    ? 0 : Math.max(0, Math.round((Number(it.parQty) - Number(it.currentCount)) * 100) / 100);
+}
+function minOrderOf(it) {
+  return (it.minOrderQty === null || it.minOrderQty === undefined) ? null : Number(it.minOrderQty);
+}
 function itemStatus(it) {
   if (it.currentCount === null || it.currentCount === undefined) return 'not_counted';
   const c = Number(it.currentCount);
+  // Held by the per-item minimum: below par, but the need (par minus count)
+  // has not reached the item's minimum order quantity, so it does not order
+  // yet. While held it shows under_min instead of reorder or top_up.
+  const min = minOrderOf(it);
+  const need = rawOrderQty(it);
+  if (min && need > 0 && need < min) return 'under_min';
   if (it.reorderQty !== null && it.reorderQty !== undefined && c <= Number(it.reorderQty)) return 'reorder';
   if (c < Number(it.parQty)) return 'top_up';
   return 'stocked';
 }
 function decorate(it) {
   const status = itemStatus(it);
-  const orderQty = (it.currentCount === null || it.currentCount === undefined)
-    ? 0 : Math.max(0, Math.round((Number(it.parQty) - Number(it.currentCount)) * 100) / 100);
-  return { ...it, status, orderQty, needsOrder: orderQty > 0 };
+  const orderQty = rawOrderQty(it);
+  const min = minOrderOf(it);
+  return { ...it, status, orderQty, needsOrder: orderQty > 0 && (!min || orderQty >= min) };
 }
 function fmtQty(n) {
   if (n === null || n === undefined) return '';
@@ -52,6 +65,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
         last_counted_at TIMESTAMPTZ
       )`);
       await pool.query(`ALTER TABLE items ADD COLUMN IF NOT EXISTS carried BOOLEAN DEFAULT FALSE`);
+      await pool.query(`ALTER TABLE items ADD COLUMN IF NOT EXISTS min_order_qty NUMERIC`);
       const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM items');
       if (rows[0].n === 0) {
         for (const s of seed) {
@@ -90,6 +104,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
       id: r.id, name: r.name, category: r.category,
       parQty: r.par_qty !== undefined ? Number(r.par_qty) : r.parQty,
       reorderQty: (r.reorder_qty !== undefined ? r.reorder_qty : r.reorderQty) === null ? null : Number(r.reorder_qty !== undefined ? r.reorder_qty : r.reorderQty),
+      minOrderQty: (r.min_order_qty !== undefined ? r.min_order_qty : r.minOrderQty) == null ? null : Number(r.min_order_qty !== undefined ? r.min_order_qty : r.minOrderQty),
       unit: r.unit, vendor: r.vendor, notes: r.notes || '',
       reorderText: r.reorder_text !== undefined ? r.reorder_text : (r.reorderText || ''),
       cadence: r.cadence, sortOrder: r.sort_order !== undefined ? r.sort_order : r.sortOrder,
@@ -104,7 +119,10 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
       const { rows } = await store.pool.query('SELECT * FROM items ORDER BY sort_order, id');
       return rows.map(rowToItem);
     }
-    return [...store.data.items].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)).map(it => ({ ...it, carried: !!it.carried }));
+    return [...store.data.items].sort((a, b) => (a.sortOrder - b.sortOrder) || (a.id - b.id)).map(it => ({
+      ...it, carried: !!it.carried,
+      minOrderQty: it.minOrderQty === null || it.minOrderQty === undefined ? null : Number(it.minOrderQty),
+    }));
   }
   function saveFile() {
     if (store.mode === 'file') fs.writeFileSync(store.file, JSON.stringify(store.data, null, 1));
@@ -150,19 +168,21 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
     const vals = {
       name: String(body.name || '').trim(), category: String(body.category || '').trim(),
       parQty: Number(body.parQty), reorderQty: body.reorderQty === '' || body.reorderQty === null || body.reorderQty === undefined ? null : Number(body.reorderQty),
+      minOrderQty: body.minOrderQty === '' || body.minOrderQty === null || body.minOrderQty === undefined ? null : Number(body.minOrderQty),
       unit: String(body.unit || '').trim(), vendor: String(body.vendor || '').trim(),
       notes: String(body.notes || ''), reorderText: String(body.reorderText || ''),
       cadence: String(body.cadence || 'monitor'), sortOrder: Number(body.sortOrder || 0),
     };
     if (!vals.name || !vals.category || !vals.unit || !vals.vendor || isNaN(vals.parQty)) throw new Error('Missing required item fields');
+    if (vals.minOrderQty !== null && (isNaN(vals.minOrderQty) || vals.minOrderQty < 0)) throw new Error('Minimum order quantity must be a number 0 or more');
     if (store.mode === 'pg') {
       if (id) {
-        await store.pool.query(`UPDATE items SET name=$1, category=$2, par_qty=$3, reorder_qty=$4, unit=$5, vendor=$6, notes=$7, reorder_text=$8, cadence=$9, sort_order=$10 WHERE id=$11`,
-          [vals.name, vals.category, vals.parQty, vals.reorderQty, vals.unit, vals.vendor, vals.notes, vals.reorderText, vals.cadence, vals.sortOrder, id]);
+        await store.pool.query(`UPDATE items SET name=$1, category=$2, par_qty=$3, reorder_qty=$4, unit=$5, vendor=$6, notes=$7, reorder_text=$8, cadence=$9, sort_order=$10, min_order_qty=$11 WHERE id=$12`,
+          [vals.name, vals.category, vals.parQty, vals.reorderQty, vals.unit, vals.vendor, vals.notes, vals.reorderText, vals.cadence, vals.sortOrder, vals.minOrderQty, id]);
         return id;
       }
-      const { rows } = await store.pool.query(`INSERT INTO items (name, category, par_qty, reorder_qty, unit, vendor, notes, reorder_text, cadence, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-        [vals.name, vals.category, vals.parQty, vals.reorderQty, vals.unit, vals.vendor, vals.notes, vals.reorderText, vals.cadence, vals.sortOrder]);
+      const { rows } = await store.pool.query(`INSERT INTO items (name, category, par_qty, reorder_qty, unit, vendor, notes, reorder_text, cadence, sort_order, min_order_qty) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+        [vals.name, vals.category, vals.parQty, vals.reorderQty, vals.unit, vals.vendor, vals.notes, vals.reorderText, vals.cadence, vals.sortOrder, vals.minOrderQty]);
       return rows[0].id;
     }
     if (id) {

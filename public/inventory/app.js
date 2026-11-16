@@ -8,7 +8,7 @@ function fmt(n) {
   return Number.isInteger(v) ? String(v) : String(v);
 }
 function chipText(s) {
-  return { reorder: 'Reorder', top_up: 'Top up', stocked: 'Stocked', not_counted: 'Not counted' }[s] || s;
+  return { reorder: 'Reorder', top_up: 'Top up', under_min: 'Under min order', stocked: 'Stocked', not_counted: 'Not counted' }[s] || s;
 }
 async function api(path, body) {
   const opts = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {};
@@ -83,10 +83,11 @@ function renderCards() {
     const countedAt = it.lastCountedAt ? new Date(it.lastCountedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     card.innerHTML = `
       <div class="nm">${escapeHtml(it.name)}</div>
-      <div class="meta">Par ${fmt(it.parQty)} ${escapeHtml(it.unit)} · ${escapeHtml(it.vendor)}${it.reorderText ? ' · ' + escapeHtml(it.reorderText) : ''}</div>
+      <div class="meta">Par ${fmt(it.parQty)} ${escapeHtml(it.unit)} · ${escapeHtml(it.vendor)}${it.minOrderQty ? ' · Min order ' + fmt(it.minOrderQty) : ''}${it.reorderText ? ' · ' + escapeHtml(it.reorderText) : ''}</div>
       ${note}
       <div class="row">
         <span class="chip ${it.status}">${chipText(it.status)}</span>
+        ${it.status === 'under_min' ? `<span class="meta">Need ${fmt(it.orderQty)} of min ${fmt(it.minOrderQty)}</span>` : ''}
         ${countedAt ? `<span class="meta">${countedAt}</span>` : ''}
         ${it.carried ? '<span class="carriedtag">Carried</span>' : ''}
         <button class="editbtn" type="button">Edit</button>
@@ -232,6 +233,7 @@ function openEditor(it) {
   $('f_category').value = it ? it.category : '';
   $('f_par').value = it ? it.parQty : '';
   $('f_reorder').value = it && it.reorderQty !== null ? it.reorderQty : '';
+  $('f_minOrder').value = it && it.minOrderQty !== null && it.minOrderQty !== undefined ? it.minOrderQty : '';
   $('f_unit').value = it ? it.unit : '';
   $('f_vendor').value = it ? it.vendor : '';
   $('f_reorderText').value = it ? it.reorderText : '';
@@ -247,6 +249,7 @@ $('itemForm').addEventListener('submit', async e => {
     id: $('f_id').value ? Number($('f_id').value) : undefined,
     name: $('f_name').value, category: $('f_category').value,
     parQty: Number($('f_par').value), reorderQty: $('f_reorder').value === '' ? null : Number($('f_reorder').value),
+    minOrderQty: $('f_minOrder').value === '' ? null : Number($('f_minOrder').value),
     unit: $('f_unit').value, vendor: $('f_vendor').value,
     reorderText: $('f_reorderText').value, notes: $('f_notes').value,
   };
