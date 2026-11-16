@@ -213,17 +213,20 @@ async function renderCartStatus() {
 $('cartBtn').onclick = async () => {
   if (!lastReport) { await renderReport(); }
   if (!lastReport || !lastReport.toOrder) { alert('Nothing to order yet. Enter counts first; only items below par go in the carts.'); return; }
-  const counts = {};
-  for (const v of Object.keys(lastReport.byVendor)) counts[v] = lastReport.byVendor[v].length;
-  if (!confirm('Build shopping carts from this order list?\n\n' + cartCountsText(counts) + '.\n\nMarley will build the carts at each store and message you the links. Deliveries are set for Friday morning (Saturday morning fallback). Nothing is checked out or paid.')) return;
+  // No confirm() gate here: on 2026-11-16 two build requests died silently at
+  // the popup and never reached the server. One press now sends the request
+  // directly, and the outcome (or the error) is written into the status line.
   $('cartBtn').disabled = true;
+  const el = $('cartStatus');
+  el.textContent = 'Sending cart request...';
   try {
     const out = await api('/inventory/api/cart-request', {});
-    if (out.error) { alert(out.error); return; }
-    alert(out.alreadyQueued
-      ? 'Carts were already requested and are in the queue. Marley is on it.'
-      : 'Cart request sent. Marley will build the carts and message you the links.');
-    await renderCartStatus();
+    if (out.error) { el.innerHTML = '<strong>Cart request failed:</strong> ' + escapeHtml(out.error); return; }
+    el.innerHTML = out.alreadyQueued
+      ? '<strong>Carts were already requested and are in the queue.</strong> Marley is on it.'
+      : '<strong>Cart request sent.</strong> Marley will build the carts and message you the links.';
+  } catch (e) {
+    el.innerHTML = '<strong>Cart request failed:</strong> ' + escapeHtml((e && e.message) || 'network error');
   } finally { $('cartBtn').disabled = false; }
 };
 // ---- item editor ----
