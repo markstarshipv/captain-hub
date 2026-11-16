@@ -226,7 +226,7 @@ function openItemDialog(id) {
 $('itemCancelBtn').onclick = () => $('itemDlg').close();
 $('itemDeleteBtn').onclick = async () => {
   const id = Number($('i_id').value);
-  if (!id || !confirm('Delete this item?')) return;
+  if (!id) return;
   await api('/api/item/delete', { id });
   $('itemDlg').close();
   await load();
