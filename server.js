@@ -22,6 +22,7 @@ const { createInventory } = require('./modules/inventory');
 const { createCash } = require('./modules/cash');
 const { createMaintenance } = require('./modules/maintenance');
 const { createChecklist } = require('./modules/checklist');
+const { createAttention } = require('./modules/attention');
 const { createTides } = require('./modules/tides');
 const { createInquiries } = require('./modules/inquiries');
 
@@ -135,6 +136,10 @@ const departure = createChecklist(deps('checklist-departure'), {
 const fuelling = createChecklist(deps('checklist-fuelling'), {
   seed: require('./seeds/fuelling.json'), tablePrefix: 'ck_fuel_', page: 'fuelling',
 });
+// Before We Leave: the pre-departure attention screen. Its own items live
+// in bw_items (or data/attention.json); it also reads the maintenance and
+// departure stores read-only for its auto-pulled sections.
+const attention = createAttention(deps('attention'));
 // Tides is PUBLIC by Mark's decision (2026-11-09): it serves published NOAA
 // predictions and stores nothing, so it gets a pass-through instead of the
 // hub sign-in. Every other program stays behind the password.
@@ -154,6 +159,7 @@ app.use('/maintenance', maintenance.router);
 app.use('/posttrip', checklist.router);
 app.use('/departure', departure.router);
 app.use('/fuelling', fuelling.router);
+app.use('/before-we-leave', attention.router);
 app.use('/tides', tides.router);
 app.use('/', inquiries.router);
 
@@ -162,6 +168,6 @@ app.use('/', inquiries.router);
 // pages; the password is asked only when a visitor clicks into a program.
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-Promise.all([inventory.ready, cash.ready, maintenance.ready, checklist.ready, departure.ready, fuelling.ready, tides.ready, inquiries.ready])
+Promise.all([inventory.ready, cash.ready, maintenance.ready, checklist.ready, departure.ready, fuelling.ready, attention.ready, tides.ready, inquiries.ready])
   .then(() => app.listen(PORT, () => console.log(`Captain Hub listening on ${PORT} (store: ${pool ? 'pg' : 'file'})`)))
   .catch(e => { console.error('Store init failed', e); process.exit(1); });
