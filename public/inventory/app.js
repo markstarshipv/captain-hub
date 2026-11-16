@@ -8,7 +8,7 @@ function fmt(n) {
   return Number.isInteger(v) ? String(v) : String(v);
 }
 function chipText(s) {
-  return { reorder: 'Reorder', top_up: 'Top up', under_min: 'Under min order', stocked: 'Stocked', not_counted: 'Not counted' }[s] || s;
+  return { top_up: 'Top up', under_min: 'Above minimum', stocked: 'Stocked', not_counted: 'Not counted' }[s] || s;
 }
 async function api(path, body) {
   const opts = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {};
@@ -21,7 +21,7 @@ async function load() {
   items = data.items;
   $('tileCounted').textContent = data.counted + ' of ' + data.total;
   $('tileToOrder').textContent = data.toOrder;
-  $('tileReorder').textContent = data.reorderCount;
+  $('tileHeld').textContent = items.filter(i => i.status === 'under_min').length;
   const carriedN = items.filter(i => i.carried).length;
   const cl = $('carriedLine');
   if (carriedN) { cl.style.display = ''; cl.textContent = carriedN + ' items still showing the last count, tap a value to confirm or adjust it.'; }
@@ -45,7 +45,7 @@ function renderPills() {
   };
   mk('All', null, items.length);
   for (const c of categories()) mk(c, c, items.filter(i => i.category === c).length);
-  const attn = items.filter(i => i.status === 'reorder').length;
+  const attn = items.filter(i => i.status === 'top_up' || i.status === 'under_min').length;
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'pill' + (needsAttention ? ' on' : '');
   b.innerHTML = 'Needs attention<span class="c">' + attn + '</span>';
@@ -59,7 +59,7 @@ function visibleItems() {
   const q = $('search').value.trim().toLowerCase();
   return items.filter(it => {
     if (activeCat && it.category !== activeCat) return false;
-    if (needsAttention && it.status !== 'reorder') return false;
+    if (needsAttention && it.status !== 'top_up' && it.status !== 'under_min') return false;
     if (q && !it.name.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -83,11 +83,11 @@ function renderCards() {
     const countedAt = it.lastCountedAt ? new Date(it.lastCountedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     card.innerHTML = `
       <div class="nm">${escapeHtml(it.name)}</div>
-      <div class="meta">Par ${fmt(it.parQty)} ${escapeHtml(it.unit)} · ${escapeHtml(it.vendor)}${it.minOrderQty ? ' · Min order ' + fmt(it.minOrderQty) : ''}${it.reorderText ? ' · ' + escapeHtml(it.reorderText) : ''}</div>
+      <div class="meta">Par ${fmt(it.parQty)} ${escapeHtml(it.unit)} · ${escapeHtml(it.vendor)}${it.minOrderQty !== null && it.minOrderQty !== undefined ? ' · Min ' + fmt(it.minOrderQty) : ''}${it.reorderText ? ' · ' + escapeHtml(it.reorderText) : ''}</div>
       ${note}
       <div class="row">
         <span class="chip ${it.status}">${chipText(it.status)}</span>
-        ${it.status === 'under_min' ? `<span class="meta">Need ${fmt(it.orderQty)} of min ${fmt(it.minOrderQty)}</span>` : ''}
+        ${it.status === 'under_min' ? `<span class="meta">Have ${fmt(it.currentCount)}, min ${fmt(it.minOrderQty)}</span>` : ''}
         ${countedAt ? `<span class="meta">${countedAt}</span>` : ''}
         ${it.carried ? '<span class="carriedtag">Carried</span>' : ''}
         <button class="editbtn" type="button">Edit</button>
@@ -141,7 +141,8 @@ async function renderReport() {
   const report = await api('/inventory/api/report');
   lastReport = report;
   renderCartStatus();
-  $('reportSummary').innerHTML = `<p><strong>${report.toOrder} items to order</strong>, ${report.reorderCount} at or below the reorder point. Counted ${report.counted} of ${report.total} items.</p>`;
+  const heldN = items.filter(i => i.status === 'under_min').length;
+  $('reportSummary').innerHTML = `<p><strong>${report.toOrder} items to order</strong>.${heldN ? ` ${heldN} held above their minimum.` : ''} Counted ${report.counted} of ${report.total} items.</p>`;
   const body = $('reportBody');
   body.innerHTML = '';
   const vendors = Object.keys(report.byVendor);
@@ -232,7 +233,6 @@ function openEditor(it) {
   $('f_name').value = it ? it.name : '';
   $('f_category').value = it ? it.category : '';
   $('f_par').value = it ? it.parQty : '';
-  $('f_reorder').value = it && it.reorderQty !== null ? it.reorderQty : '';
   $('f_minOrder').value = it && it.minOrderQty !== null && it.minOrderQty !== undefined ? it.minOrderQty : '';
   $('f_unit').value = it ? it.unit : '';
   $('f_vendor').value = it ? it.vendor : '';
@@ -245,15 +245,18 @@ $('addItemBtn').onclick = () => openEditor(null);
 $('cancelItemBtn').onclick = () => $('itemDlg').close();
 $('itemForm').addEventListener('submit', async e => {
   e.preventDefault();
+  const cur = items.find(i => i.id === ($('f_id').value ? Number($('f_id').value) : undefined));
   const body = {
     id: $('f_id').value ? Number($('f_id').value) : undefined,
     name: $('f_name').value, category: $('f_category').value,
-    parQty: Number($('f_par').value), reorderQty: $('f_reorder').value === '' ? null : Number($('f_reorder').value),
+    parQty: Number($('f_par').value),
+    // The reorder point is no longer a UI concept; the API clears the
+    // stored value when the field is omitted, so pass it through as-is.
+    reorderQty: cur ? cur.reorderQty : null,
     minOrderQty: $('f_minOrder').value === '' ? null : Number($('f_minOrder').value),
     unit: $('f_unit').value, vendor: $('f_vendor').value,
     reorderText: $('f_reorderText').value, notes: $('f_notes').value,
   };
-  const cur = items.find(i => i.id === body.id);
   body.sortOrder = cur ? cur.sortOrder : items.length;
   body.cadence = cur ? cur.cadence : 'monitor';
   await api('/inventory/api/item', body);

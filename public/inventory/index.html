@@ -36,7 +36,7 @@
   .card .note{font-size:12px;color:#7a5b00;background:#fff8e1;border-radius:6px;padding:4px 6px;margin-top:6px}
   .row{display:flex;align-items:center;gap:8px;margin-top:8px}
   .chip{font-size:11px;font-weight:800;letter-spacing:.03em;padding:4px 8px;border-radius:999px;text-transform:uppercase}
-  .chip.reorder{background:#fde3e3;color:#a12b2b}.chip.top_up{background:#fff1bf;color:#7a5b00}.chip.under_min{background:#dfe9f5;color:#2f4d75}.chip.stocked{background:#dcf2e5;color:#1d6b41}.chip.not_counted{background:#e8edf1;color:#5c6b78}
+  .chip.top_up{background:#fff1bf;color:#7a5b00}.chip.under_min{background:#dfe9f5;color:#2f4d75}.chip.stocked{background:#dcf2e5;color:#1d6b41}.chip.not_counted{background:#e8edf1;color:#5c6b78}
   .stepper{margin-left:auto;display:flex;align-items:center;gap:6px}
   .stepper button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:20px;cursor:pointer}
   .stepper input{width:64px;text-align:center;font-size:16px;padding:8px 4px;border:1px solid var(--line);border-radius:8px}
@@ -44,7 +44,7 @@
   .editbtn{border:0;background:none;color:var(--mut);font-size:12px;cursor:pointer;text-decoration:underline}
   .vendor{margin-bottom:18px} .vendor h3{margin:14px 0 6px;font-size:16px;color:var(--navy)}
   .oline{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:14px}
-  .oline .flag{font-weight:800;font-size:11px} .flag.REORDER{color:#a12b2b}.flag.Belowpar{color:#7a5b00}
+  .oline .flag{font-weight:800;font-size:11px} .flag.Belowpar{color:#7a5b00}
   .btn{display:inline-block;border:0;border-radius:8px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer;background:var(--navy);color:#fff}
   .btn.alt{background:#e8edf1;color:var(--ink)} .btn.warn{background:var(--red);color:#fff} .btn.gold{background:var(--gold);color:var(--ink)}
   .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
@@ -59,11 +59,11 @@
 <header>
   <a class="logout" href="/logout">Sign out</a> <a class="logout" href="/" style="margin-right:12px;background:linear-gradient(160deg,#0b2239,#12365a);color:#fff;padding:8px 16px;border:1px solid #c9a227;border-radius:999px;text-decoration:none;font-weight:600;letter-spacing:1.5px;font-size:13px"><span style="color:#c9a227;font-size:14px">&#9875;</span> HOME</a>
   <h1>Starship V Par Inventory</h1>
-  <div class="sub">Weekly count. REORDER means at or below the reorder point. TOP UP means below par, not urgent. UNDER MIN ORDER means below par, but the need has not reached the item's minimum order quantity, so it is held.</div>
+  <div class="sub">Weekly count. TOP UP means below par, not urgent. ABOVE MINIMUM means below par, but the count is still above the item's minimum, so it is held until the count drops to the minimum.</div>
   <div class="tiles">
     <div class="tile"><div class="n" id="tileCounted">0 of 0</div><div class="l">Counted</div></div>
     <button class="tile" id="tileOrder" type="button"><div class="n" id="tileToOrder">0</div><div class="l">Items to order</div><div class="hint">View order report</div></button>
-    <div class="tile"><div class="n" id="tileReorder">0</div><div class="l">At reorder point</div></div>
+    <div class="tile"><div class="n" id="tileHeld">0</div><div class="l">Held above min</div></div>
   </div>
   <div class="carriedline" id="carriedLine" style="display:none"></div>
 </header>
@@ -103,8 +103,7 @@
     <label>Name<input id="f_name" required></label>
     <label>Category<input id="f_category" required></label>
     <label>Par quantity<input id="f_par" type="number" step="0.25" min="0" required></label>
-    <label>Reorder point (blank if none)<input id="f_reorder" type="number" step="0.25" min="0"></label>
-    <label>Minimum order qty (blank if none)<input id="f_minOrder" type="number" step="0.25" min="0"></label>
+    <label>Minimum (floor, blank if none)<input id="f_minOrder" type="number" step="0.25" min="0"></label>
     <label>Unit<input id="f_unit" required></label>
     <label>Vendor<input id="f_vendor" required></label>
     <label>Reorder note<input id="f_reorderText"></label>

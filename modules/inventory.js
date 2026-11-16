@@ -22,13 +22,13 @@ function minOrderOf(it) {
 function itemStatus(it) {
   if (it.currentCount === null || it.currentCount === undefined) return 'not_counted';
   const c = Number(it.currentCount);
-  // Held by the per-item minimum: below par, but the need (par minus count)
-  // has not reached the item's minimum order quantity, so it does not order
-  // yet. While held it shows under_min instead of reorder or top_up.
+  // Held by the per-item minimum: the minimum is a floor on the count.
+  // Below par, but the count is still above the floor, so the item does
+  // not order yet. While held it shows under_min instead of top_up.
+  // Once the count drops to or below the floor it orders normally
+  // (up to par). Only a null minimum means no floor; 0 is a literal floor.
   const min = minOrderOf(it);
-  const need = rawOrderQty(it);
-  if (min && need > 0 && need < min) return 'under_min';
-  if (it.reorderQty !== null && it.reorderQty !== undefined && c <= Number(it.reorderQty)) return 'reorder';
+  if (min !== null && c < Number(it.parQty) && c > min) return 'under_min';
   if (c < Number(it.parQty)) return 'top_up';
   return 'stocked';
 }
@@ -36,7 +36,8 @@ function decorate(it) {
   const status = itemStatus(it);
   const orderQty = rawOrderQty(it);
   const min = minOrderOf(it);
-  return { ...it, status, orderQty, needsOrder: orderQty > 0 && (!min || orderQty >= min) };
+  const c = (it.currentCount === null || it.currentCount === undefined) ? null : Number(it.currentCount);
+  return { ...it, status, orderQty, needsOrder: orderQty > 0 && (min === null || c <= min) };
 }
 function fmtQty(n) {
   if (n === null || n === undefined) return '';
@@ -174,7 +175,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
       cadence: String(body.cadence || 'monitor'), sortOrder: Number(body.sortOrder || 0),
     };
     if (!vals.name || !vals.category || !vals.unit || !vals.vendor || isNaN(vals.parQty)) throw new Error('Missing required item fields');
-    if (vals.minOrderQty !== null && (isNaN(vals.minOrderQty) || vals.minOrderQty < 0)) throw new Error('Minimum order quantity must be a number 0 or more');
+    if (vals.minOrderQty !== null && (isNaN(vals.minOrderQty) || vals.minOrderQty < 0)) throw new Error('Minimum must be a number 0 or more');
     if (store.mode === 'pg') {
       if (id) {
         await store.pool.query(`UPDATE items SET name=$1, category=$2, par_qty=$3, reorder_qty=$4, unit=$5, vendor=$6, notes=$7, reorder_text=$8, cadence=$9, sort_order=$10, min_order_qty=$11 WHERE id=$12`,
@@ -209,19 +210,21 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
   async function buildReport() {
     const items = (await listItems()).map(decorate);
     const byVendor = {};
-    let toOrder = 0, reorderCount = 0, counted = 0;
+    let toOrder = 0, counted = 0;
     for (const it of items) {
       if (it.currentCount !== null) counted++;
       if (it.needsOrder) {
         toOrder++;
-        if (it.status === 'reorder') reorderCount++;
         (byVendor[it.vendor] = byVendor[it.vendor] || []).push({
           name: it.name, have: it.currentCount, par: it.parQty, order: it.orderQty,
-          unit: it.unit, flag: it.status === 'reorder' ? 'REORDER' : 'Below par', notes: it.notes,
+          unit: it.unit, flag: 'Below par', notes: it.notes,
         });
       }
     }
-    return { generatedAt: new Date().toISOString(), total: items.length, counted, toOrder, reorderCount, byVendor };
+    // reorderCount is always 0 now: the reorder point concept was removed
+    // (2026-11-15). The key stays so the report shape is unchanged for the
+    // Monday report and cart builder consumers.
+    return { generatedAt: new Date().toISOString(), total: items.length, counted, toOrder, reorderCount: 0, byVendor };
   }
 
   // ---------------- shopping cart requests ----------------
@@ -365,7 +368,7 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
     doc.fontSize(18).font('Helvetica-Bold').text('Starship V, Weekly Order Report');
     doc.fontSize(11).font('Helvetica').text(dateStr);
     doc.moveDown(0.5);
-    doc.text(`Items to order: ${report.toOrder} (${report.reorderCount} at or below reorder point). Counted ${report.counted} of ${report.total} items.`);
+    doc.text(`Items to order: ${report.toOrder}. Counted ${report.counted} of ${report.total} items.`);
     doc.moveDown(1);
     const vendors = Object.keys(report.byVendor);
     if (!vendors.length) doc.text('Nothing to order. All counted items are at or above par.');
@@ -390,7 +393,6 @@ function createInventory({ pool, dataFile, requireAuth, reportToken }) {
     summary.addRow(['Starship V, Weekly Order Report']);
     summary.addRow(['Generated', new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })]);
     summary.addRow(['Items to order', report.toOrder]);
-    summary.addRow(['At or below reorder point', report.reorderCount]);
     summary.addRow(['Counted', `${report.counted} of ${report.total}`]);
     for (const v of Object.keys(report.byVendor)) {
       const ws = wb.addWorksheet(v.replace(/[^\w ]/g, '').slice(0, 28) || 'Vendor');
