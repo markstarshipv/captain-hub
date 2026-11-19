@@ -235,10 +235,40 @@ async function openHistory(it) {
       const stamp = l.createdAt ? new Date(l.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
       const thumbs = (l.photos || []).map(p =>
         `<a href="/maintenance/photo/${l.id}/${p.id}" target="_blank" rel="noopener"><img src="/maintenance/photo/${l.id}/${p.id}" alt="Entry photo" loading="lazy"></a>`).join('');
-      return `<div class="histline"><strong>${fmtDate(l.servicedOn)}</strong>, by ${escapeHtml(l.performedBy)}<div>${escapeHtml(l.note || '')}</div>${hrs ? `<div class="meta">${escapeHtml(hrs)}</div>` : ''}<div class="meta">Logged ${escapeHtml(stamp)}</div>${thumbs ? `<div class="thumbs">${thumbs}</div>` : ''}<div><button class="editbtn" type="button" data-photo="${l.id}">Add photo</button></div></div>`;
+      return `<div class="histline"><strong>${fmtDate(l.servicedOn)}</strong>, by ${escapeHtml(l.performedBy)}<div data-note-for="${l.id}">${escapeHtml(l.note || '')}</div>${hrs ? `<div class="meta">${escapeHtml(hrs)}</div>` : ''}<div class="meta">Logged ${escapeHtml(stamp)}</div>${thumbs ? `<div class="thumbs">${thumbs}</div>` : ''}<div><button class="editbtn" type="button" data-photo="${l.id}">Add photo</button> <button class="editbtn" type="button" data-editnote="${l.id}">Edit note</button></div></div>`;
     }).join('');
     body.querySelectorAll('[data-photo]').forEach(b => {
       b.onclick = () => { photoTargetLogId = Number(b.dataset.photo); $('photoFile').click(); };
+    });
+    body.querySelectorAll('[data-editnote]').forEach(b => {
+      b.onclick = () => {
+        const logId = Number(b.dataset.editnote);
+        const log = data.logs.find(x => x.id === logId);
+        const noteDiv = body.querySelector(`[data-note-for="${logId}"]`);
+        if (!log || !noteDiv || noteDiv.dataset.editing) return;
+        noteDiv.dataset.editing = '1';
+        const old = log.note || '';
+        noteDiv.innerHTML = '';
+        const ta = document.createElement('textarea');
+        ta.value = old;
+        ta.rows = 4;
+        ta.style.width = '100%';
+        const save = document.createElement('button');
+        save.type = 'button'; save.className = 'editbtn'; save.textContent = 'Save note';
+        const cancel = document.createElement('button');
+        cancel.type = 'button'; cancel.className = 'editbtn'; cancel.textContent = 'Cancel';
+        save.onclick = async () => {
+          try {
+            await api('/maintenance/api/log/edit', { id: logId, note: ta.value });
+            log.note = ta.value;
+            delete noteDiv.dataset.editing;
+            noteDiv.textContent = ta.value;
+          } catch (e) { alert(e.message); }
+        };
+        cancel.onclick = () => { delete noteDiv.dataset.editing; noteDiv.textContent = old; };
+        noteDiv.append(ta, save, cancel);
+        ta.focus();
+      };
     });
   }
   if (!$('histDlg').open) $('histDlg').showModal();

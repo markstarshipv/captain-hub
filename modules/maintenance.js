@@ -222,6 +222,17 @@ function createMaintenance({ pool, dataFile, requireAuth, reportToken }) {
     saveFile();
     return id;
   }
+  async function updateLogNote(id, note) {
+    if (store.mode === 'pg') {
+      const { rowCount } = await store.pool.query('UPDATE mt_logs SET note=$1 WHERE id=$2', [note, id]);
+      return rowCount > 0;
+    }
+    const l = store.data.logs.find(x => x.id === id);
+    if (!l) return false;
+    l.note = note;
+    saveFile();
+    return true;
+  }
   async function addPhoto(logId, mime, buffer) {
     if (store.mode === 'pg') {
       const { rows } = await store.pool.query(
@@ -449,6 +460,18 @@ function createMaintenance({ pool, dataFile, requireAuth, reportToken }) {
       if (Object.keys(clean).length) hoursAtService = clean;
     }
     const id = await addLog({ itemId, servicedOn, performedBy, note: String(req.body.note || ''), hoursAtService });
+    res.json({ ok: true, id });
+  });
+  // Correct the note on an existing entry. The UI has no edit for a saved
+  // entry; this endpoint exists so a note can be fixed without deleting or
+  // duplicating the entry (added 2026-11-18 to correct a generator entry).
+  router.post('/api/log/edit', async (req, res) => {
+    const id = Number(req.body.id);
+    if (!id) return res.status(400).json({ error: 'Entry id is required' });
+    const logs = await listLogs();
+    if (!logs.find(l => l.id === id)) return res.status(404).json({ error: 'Unknown entry' });
+    const ok = await updateLogNote(id, String(req.body.note || ''));
+    if (!ok) return res.status(404).json({ error: 'Unknown entry' });
     res.json({ ok: true, id });
   });
   // Entry photos, the cash module's receipt pattern extended to more than
