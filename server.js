@@ -98,6 +98,12 @@ app.get('/about-captain-mark', (req, res) => res.sendFile(path.join(__dirname, '
 app.get('/about-legacy-yacht', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about-legacy-yacht.html')));
 app.use('/about', express.static(path.join(__dirname, 'public', 'about'), { maxAge: '1h' }));
 
+// ---------------- Legacy Yacht redesign preview (UNLISTED, no sign-in) -----------------
+// Static mockup of the redesigned Legacy Yacht site, hosted here only so it
+// can be shown for input before publishing. Deliberately not linked from any
+// menu, footer, or public page; reachable only by its direct address.
+app.get('/legacy-preview', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview.html')));
+
 // ---------------- supply stock photo map (sign-in required) ----------------
 // Static copy of the Starship V supply stock photo map, hosted on the hub
 // itself so it does not live on anyone's personal Google Drive (added
