@@ -110,7 +110,7 @@ app.get('/legacy-preview/experiences', (req, res) => res.sendFile(path.join(__di
 app.get('/legacy-preview/on-board', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-on-board.html')));
 app.get('/legacy-preview/membership', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-membership.html')));
 app.get('/legacy-preview/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-gallery.html')));
-app.get('/legacy-preview/release', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-release.html')));
+app.get('/legacy-preview/release', (req, res) => res.redirect(301, '/legacy-preview/register'));
 app.get('/legacy-preview/register', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-register.html')));
 
 // ---------------- supply stock photo map (sign-in required) ----------------
