@@ -102,7 +102,16 @@ app.use('/about', express.static(path.join(__dirname, 'public', 'about'), { maxA
 // Static mockup of the redesigned Legacy Yacht site, hosted here only so it
 // can be shown for input before publishing. Deliberately not linked from any
 // menu, footer, or public page; reachable only by its direct address.
+// Split into subpages 2026-11-23 (home + 8 subpages, each its own file/route).
 app.get('/legacy-preview', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview.html')));
+app.get('/legacy-preview/club', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-club.html')));
+app.get('/legacy-preview/yacht', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-yacht.html')));
+app.get('/legacy-preview/experiences', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-experiences.html')));
+app.get('/legacy-preview/on-board', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-on-board.html')));
+app.get('/legacy-preview/membership', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-membership.html')));
+app.get('/legacy-preview/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-gallery.html')));
+app.get('/legacy-preview/release', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-release.html')));
+app.get('/legacy-preview/register', (req, res) => res.sendFile(path.join(__dirname, 'public', 'legacy-preview-register.html')));
 
 // ---------------- supply stock photo map (sign-in required) ----------------
 // Static copy of the Starship V supply stock photo map, hosted on the hub
